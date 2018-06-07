@@ -1,0 +1,146 @@
+from rsf.proj import*
+
+#Velocity
+Flow("Fvel",None,
+'''
+spike mag=1500,3000,3000 nsp=3 k1=1,101,49 l1=100,200,51 k2=1,1,49 l2=200,200,51 d1=4 d2=4 label1=z label2=x n1=200 n2=200 o1=2 o2=2 unit1=m unit2=m
+''')
+
+#Density
+Flow("Fden",None,
+'''
+spike mag=1 nsp=1 k1=1 l1=200 d1=4 d2=4 label1=z label2=x n1=200 n2=200 o1=2 o2=2 unit1=m unit2=m
+''')
+
+#Source
+Flow("Fsou",None,
+'''
+spike n1=2 nsp=2 k1=1,2 mag=400,0 o1=0 o2=0
+''')
+
+#Receiver
+Flow("Frec",None,
+'''
+spike 
+n1=2 n2=10
+nsp=20
+k1=1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2
+l1=1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2
+k2=1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10
+l2=1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10
+mag=0,0,80,0,160,0,240,0,320,0,480,0,560,0,640,0,720,0,800,0
+o1=0 o2=0
+''')
+
+#Wavelet
+Flow("Fwav",None,
+'''
+spike nsp=1 n1=2000 d1=0.0005 k1=200 | ricker1 frequency=25 | transp
+''')
+
+# FDTD
+Flow("Fdat","Fwav",
+'''
+awefd2d vel=Fvel.rsf sou=Fsou.rsf rec=Frec.rsf wfl=Fwfl.rsf den=Fden.rsf verb=y free=n expl=y snap=y dabc=y nb=100 jdata=1 jsnap=1
+''')
+
+# Backward the wave
+for i in range(0,10):
+	# extract the data from each receiver
+	str_num='Fdat'+str(i)
+	Flow(str_num,"Fdat",
+	'''
+	window f1=%d n1=1 verb=y | transp
+	'''%i)
+
+	# reverse the data along the time axis
+	str_num2='Tdat'+str(i)
+	Flow(str_num2,str_num,
+	'''reverse which=2 opt=i verb=y
+	''')
+	
+	# extract the receiver locatoin from each receiver
+	str_num3='Frec'+str(i)
+	Flow(str_num3,"Frec",
+	'''
+	window f2=%d n2=1 verb=y
+	'''%i)
+
+	# Backward the wave from each receiver
+	str_num4='RSdat'+str(i)
+	str_num5='Twfl'+str(i)
+	Flow(str_num4,str_num2,
+	'''
+	awefd2d vel=Fvel.rsf sou=%s.rsf rec=Fsou.rsf wfl=%s.rsf den=Fden.rsf verb=y free=n expl=y snap=y dabc=y nb=100 jdata=1 jsnap=1
+	'''
+	%(str_num3,str_num5))
+	
+	# reverse the wavefield along the time axis
+	str_num6='Mwfl'+str(i)
+	Flow(str_num6,str_num5,
+	'''
+	reverse which=4 opt=i verb=y
+	''')
+	str_num7='Rwfl'+str(i)
+	# multiply the parameter
+	Flow(str_num7,None,
+	'''
+    	sfmath xx1=%s.rsf output='xx1*1e15'
+	'''%str_num6)
+
+# multiply all the backward wavefield
+Flow("imag1","Rwfl0",
+     ''' 
+     add mode=p Rwfl1.rsf Rwfl2.rsf Rwfl3.rsf Rwfl4.rsf Rwfl5.rsf Rwfl6.rsf Rwfl7.rsf Rwfl8.rsf Rwfl9.rsf
+
+     ''')
+
+# multiply the forward wavefield
+Flow("imag2","imag1",
+     '''
+     add mode=p Fwfl.rsf
+     ''')
+
+# stack along the time axis
+Flow("imag3","imag2",
+     '''
+     stack axis=3
+     ''')
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

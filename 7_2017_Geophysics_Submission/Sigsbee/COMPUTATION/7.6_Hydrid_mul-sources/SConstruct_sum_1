@@ -1,0 +1,54 @@
+from rsf.proj import *
+import fdmod
+
+# multiply all the backward wavefield
+
+Flow('tempwave_1_d',['Rwfl_1_1_d','Rwfl_1_2_d','Rwfl_1_3_d','Rwfl_1_4_d','Rwfl_1_5_d','Rwfl_1_6_d'],
+     '''
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]} ${SOURCES[5]}
+     ''')
+
+Flow('tempwave_1_o',['Rwfl_1_1_o','Rwfl_1_2_o','Rwfl_1_3_o','Rwfl_1_4_o','Rwfl_1_5_o','Rwfl_1_6_o'],
+     '''
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]} ${SOURCES[5]}
+     ''')
+
+# multiply the forward wavefield
+
+Flow('wave_1_d',['tempwave_1_d','Fwfl_1'],
+     '''
+     add mode=p ${SOURCES[1]}
+     ''')
+Flow('wave_1_o',['tempwave_1_o','Fwfl_1'],
+     '''
+     add mode=p ${SOURCES[1]}
+     ''')
+Flow('wave_1_r_d',['Rwfl_1_r_d','Fwfl_1'],
+     '''
+     add mode=p ${SOURCES[1]}
+     ''')
+Flow('wave_1_r_o',['Rwfl_1_r_o','Fwfl_1'],
+     '''
+     add mode=p ${SOURCES[1]}
+     ''')
+
+# stack along the time axis
+
+Flow('image_1_CRS_GmRTM','wave_1_d',
+     '''
+     stack axis=3
+     ''')
+Flow('image_1_GmRTM','wave_1_o',
+     '''
+     stack axis=3
+     ''')
+Flow('image_1_CRS_RTM','wave_1_r_d',
+     '''
+     stack axis=3
+     ''')
+Flow('image_1_RTM','wave_1_r_o',
+     '''
+     stack axis=3
+     ''')
+
+End()

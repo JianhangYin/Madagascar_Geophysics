@@ -1,0 +1,339 @@
+from rsf.proj import *
+import fdmod
+
+Program('Automatic.x','Automatic.c')
+Program('Linear.x','Linear.c')
+Program('Hyperbolic.x','Hyperbolic.c')
+Program('Tf.x','Tf.c')
+Program('Travelpick.x','Travelpick.c')
+Program('Extract3D_advanced.x','Extract3D_advanced.c')
+
+
+par={
+     'nx':600,   'ox':4.572,   'dx':0.01524,  'lx':'Distance', 'ux':'km',
+     'nz':10000,  'oz':0,       'dz':0.001,    'lz':'Time',     'uz':'s',
+     'scalebar':'y'
+    }
+fdmod.param(par)
+
+# Velocity Scan #
+#Flow(['Scan'],['data-cmp', 'Automatic.x'],
+#     '''
+#     ./Automatic.x
+#     v0=1.0 nv=400 dv=0.01
+#     w=20
+#     ''')
+
+###########################################################################################
+#################################### Automatic CRS ########################################
+###########################################################################################
+
+# Velocity Scan #
+Flow('Scan','data-cmp',
+     '''
+     transp plane=23 |
+     vscan half=y v0=1.0 nv=400 dv=0.01 semblance=y
+     ''')
+Flow('Scan1','Scan',
+     '''
+     transp plane=23
+     ''')
+
+# Velocity Picking #
+Flow('pick','Scan1',
+     '''
+     transp plane=23 |
+     pick rect1=50 rect2=100 vel0=1.5 | 
+     window
+     ''')
+
+# Conventional CMP stack #
+Flow('nmo','data-cmp pick',
+      '''
+      transp plane=23 | 
+      nmo velocity=${SOURCES[1]}
+      ''')
+Flow('stack','nmo','stack')
+
+# ZO data #
+Flow('zero','data-cmp','window f3=0 n3=1')
+
+###########################################################################################
+##################################### Linear CRS ##########################################
+###########################################################################################
+
+# Linear ZO stack #
+Flow(['Rnip', 'Alpha','coherent1'],['zero', 'pick', 'Linear.x'],
+     '''
+     ./Linear.x
+     vel=${SOURCES[1]}
+     alph=${TARGETS[1]}
+     coh=${TARGETS[2]}
+     na=360
+     w=20
+     ntr=20
+     vns=1.5
+     ''')
+Flow('AlphaCoherent',['Alpha','coherent1'],'add mode=p ${SOURCES[1]}')
+Flow('RnipCoherent',['Rnip','coherent1'],'add mode=p ${SOURCES[1]}')
+
+###########################################################################################
+################################### Hyperbolic CRS ########################################
+###########################################################################################
+
+# Hyperbolic ZO stack #
+Flow(['Rn','coherent2'],['zero', 'Alpha', 'Hyperbolic.x'],
+     '''
+     ./Hyperbolic.x
+     alph=${SOURCES[1]}
+     coh=${TARGETS[1]}
+     r0=-40
+     dr=0.01
+     nr=8000
+     w=40
+     ntr=40
+     vns=1.5
+     ''')
+Flow('RnCoherent',['Rn','coherent2'],'add mode=p ${SOURCES[1]}')
+
+###########################################################################################
+######################################## Tf CRS ###########################################
+###########################################################################################
+
+# Tf calculation coherent #
+Flow('Tf',['RnipCoherent', 'RnCoherent', 'Tf.x'],
+     '''
+     ./Tf.x
+     rn=${SOURCES[1]}
+     ''')
+
+###########################################################################################
+################################### travel time pick ######################################
+###########################################################################################
+
+Flow('Travelpick',['data-cmp','Alpha','Rnip','Travelpick.x'],
+     '''
+     ./Travelpick.x
+     alph=${SOURCES[1]}
+     rnip=${SOURCES[2]}
+     vns=1.5
+     ''')
+
+###########################################################################################
+################################ diffraction extraction ###################################
+###########################################################################################
+
+# without smoothing #
+Flow('diffractionCMP',['data-cmp','Travelpick','Tf','Extract3D_advanced.x'],
+     '''
+     ./Extract3D_advanced.x
+     pick=${SOURCES[1]}
+     Tf=${SOURCES[2]}
+     k=0
+     tfdif=0.85
+     ''')
+
+# Smoothing #
+Flow('Tf_9','Tf','smooth rect1=9 rect2=9')
+Flow('diffractionCMP_smooth',['data-cmp','Travelpick','Tf_9','Extract3D_advanced.x'],
+     '''
+     ./Extract3D_advanced.x
+     pick=${SOURCES[1]}
+     Tf=${SOURCES[2]}
+     k=0
+     tfdif=0.85
+     ''')
+
+###########################################################################################
+############################### Diffraction data Plotting #################################
+###########################################################################################
+
+Result('data-cmp',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="CMP_gathers" point1=0.8 point2=0.8 
+       ''')
+Result('diffractionCMP',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction" point1=0.8 point2=0.8 
+       ''')
+Result('diffractionCMP_smooth',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction" point1=0.8 point2=0.8 
+       ''')
+
+###########################################################################################
+######################################### detail ##########################################
+###########################################################################################
+
+# Original data #
+Flow('data-cmp_detail','data-cmp',
+     '''
+     window f1=4500 n1=4500 f2=0 n2=300
+     ''')
+
+# without smoothing #
+Flow('diffractionCMP_detail','diffractionCMP',
+     '''
+     window f1=4500 n1=4500 f2=0 n2=300
+     ''')
+
+# Smoothing #
+Flow('diffractionCMP_smooth_detail','diffractionCMP_smooth',
+     '''
+     window f1=4500 n1=4500 f2=0 n2=300
+     ''')
+
+###########################################################################################
+################################## Detail Plotting ########################################
+###########################################################################################
+
+Result('data-cmp_detail',
+       '''
+       byte |
+       grey3 flat=y frame1=2250 frame3=0 frame2=150
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction_detail" point1=0.8 point2=0.8 
+       ''')
+Result('diffractionCMP_detail',
+       '''
+       byte |
+       grey3 flat=y frame1=2250 frame3=0 frame2=150
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction_detail" point1=0.8 point2=0.8 
+       ''')
+
+Result('diffractionCMP_smooth_detail',
+       '''
+       byte |
+       grey3 flat=y frame1=2250 frame3=0 frame2=150
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction_detail" point1=0.8 point2=0.8 
+       ''')
+
+###########################################################################################
+######################################### trick ###########################################
+###########################################################################################
+
+# Mask #
+Flow('mask',None,
+     '''
+     spike mag=1 nsp=1 
+     k1=4500 l1=9000 k2=1 l2=300 
+     n1=10000 n2=600
+     o1=0 o2=4.572
+     d1=0.001 d2=0.01524
+     ''')
+
+# Original data #
+Flow('data_origin',['data-cmp','Travelpick','mask','Extract3D_advanced.x'],
+     '''
+     ./Extract3D_advanced.x
+     pick=${SOURCES[1]}
+     Tf=${SOURCES[2]}
+     k=0
+     tfdif=0.85
+     ''')
+
+# without smoothing # 
+Flow('data_diffraction',['diffractionCMP','Travelpick','mask','Extract3D_advanced.x'],
+     '''
+     ./Extract3D_advanced.x
+     pick=${SOURCES[1]}
+     Tf=${SOURCES[2]}
+     k=0
+     tfdif=0.85
+     ''')
+
+###########################################################################################
+##################################### trick Plotting ######################################
+###########################################################################################
+
+Result('data_origin',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction_Pre" point1=0.8 point2=0.8 
+       ''')
+
+Result('data_diffraction',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="diffraction" point1=0.8 point2=0.8 
+       ''')
+
+###########################################################################################
+###################################### Plotting ###########################################
+###########################################################################################
+
+Result('pick',            fdmod.cgrey('title="Velocity_Pick"        screenratio=0.7 color=j label1=Time unit1=s',par))
+Result('stack',           fdmod.cgrey('title="Stacked_Data"         screenratio=0.7 color=i label1=Time unit1=s',par))
+Result('zero',            fdmod.cgrey('title="ZO_Data"              screenratio=0.7 color=i label1=Time unit1=s',par))
+
+Result('coherent1',       fdmod.cgrey('title="Coherence_Linear"     screenratio=0.7 color=i label1=Time unit1=s',par))
+Result('coherent2',       fdmod.cgrey('title="Coherence_Hyperbolic" screenratio=0.7 color=i label1=Time unit1=s',par))
+
+Result('Alpha',           fdmod.cgrey('title="Alpha"                screenratio=0.7 color=e label1=Time unit1=s',par))
+Result('AlphaCoherent',   fdmod.cgrey('title="Alpha_Coherence"      screenratio=0.7 color=e label1=Time unit1=s',par))
+
+Result('Rnip',            fdmod.cgrey('title="Rnip"                 screenratio=0.7 color=j label1=Time unit1=s',par))
+Result('RnipCoherent',    fdmod.cgrey('title="Rnip_Coherence"       screenratio=0.7 color=j label1=Time unit1=s',par))
+
+Result('Rn',              fdmod.cgrey('title="Rn"                   screenratio=0.7 color=j label1=Time unit1=s',par))
+Result('RnCoherent',      fdmod.cgrey('title="Rn_Coherence"         screenratio=0.7 color=j label1=Time unit1=s',par))
+
+Result('Tf',              fdmod.cgrey('title="Tf"                   screenratio=0.7 color=H label1=Time unit1=s',par))
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

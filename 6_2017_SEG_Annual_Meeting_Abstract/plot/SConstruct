@@ -1,0 +1,146 @@
+from rsf.proj import*
+import fdmod
+
+# parameter
+#----------------------------------------------------------------------------------------------
+par={
+   'nt':10000, 'ot':0,     'dt':0.001,   'lt':'t',        'ut':'s',
+   'nx':1599,  'ox':3.048, 'dx':0.00762, 'lx':'Distance', 'ux':'km',
+   'nz':900,   'oz':0.762, 'dz':0.00762, 'lz':'Depth',    'uz':'km' ,
+   'kt':100,   'scalebar':'y', 'ratio':0.5,
+    }
+fdmod.param(par)
+par['xsou']=6
+par['zsou']=0.762
+par['xrec1']=4
+par['zrec1']=0.762
+par['xrec2']=5
+par['zrec2']=0.762
+par['xrec3']=7
+par['zrec3']=0.762
+par['xrec4']=8
+par['zrec4']=0.762
+par['xrec5']=9
+par['zrec5']=0.762
+
+par['xd1']=par['ox']+201*par['dx']
+par['zd1']=par['oz']+581*par['dz']
+par['xd2']=par['ox']+401*par['dx']
+par['zd2']=par['oz']+581*par['dz']
+par['xd3']=par['ox']+601*par['dx']
+par['zd3']=par['oz']+581*par['dz']
+par['xd4']=par['ox']+801*par['dx']
+par['zd4']=par['oz']+581*par['dz']
+par['xd5']=par['ox']+1001*par['dx']
+par['zd5']=par['oz']+581*par['dz']
+par['xd6']=par['ox']+1201*par['dx']
+par['zd6']=par['oz']+581*par['dz']
+par['xd7']=par['ox']+1401*par['dx']
+par['zd7']=par['oz']+581*par['dz']
+
+
+parm={
+   'nt':10000, 'ot':0,     'dt':0.001,   'lt':'t',        'ut':'s',
+   'nx':1066,  'ox':3.055, 'dx':0.01143, 'lx':'Distance', 'ux':'km',
+   'nz':900,   'oz':0.762, 'dz':0.00762, 'lz':'Depth',    'uz':'km' ,
+   'kt':100,   'scalebar':'y',
+    }
+fdmod.param(parm)
+#---------------------------------------------------------------------------------------------
+# source and receivers
+#---------------------------------------------------------------------------------------------
+fdmod.point('ss',par['xsou'],par['zsou'],par)
+
+fdmod.point('rr1',par['xrec1'],par['zrec1'],par)
+fdmod.point('rr2',par['xrec2'],par['zrec2'],par)
+fdmod.point('rr3',par['xrec3'],par['zrec3'],par)
+fdmod.point('rr4',par['xrec4'],par['zrec4'],par)
+fdmod.point('rr5',par['xrec5'],par['zrec5'],par)
+Flow('rr',['rr1','rr2','rr3','rr4','rr5'],'cat axis=2 space=n ${SOURCES[1:5]}')
+Plot('ss',fdmod.ssplot('symbol=* symbolsz=6 plotcol=2 plotfat=2',par) )
+Plot('rr',fdmod.rrplot('symbol=. symbolsz=20 plotcol=1',par) )
+
+# diffrator
+#---------------------------------------------------------------------------------------------
+
+fdmod.point('d1',par['xd1'],par['zd1'],par)
+fdmod.point('d2',par['xd2'],par['zd2'],par)
+fdmod.point('d3',par['xd3'],par['zd3'],par)
+fdmod.point('d4',par['xd4'],par['zd4'],par)
+fdmod.point('d5',par['xd5'],par['zd5'],par)
+fdmod.point('d6',par['xd6'],par['zd6'],par)
+fdmod.point('d7',par['xd7'],par['zd7'],par)
+Flow('dd',['d1','d2','d3','d4','d5','d6','d7'],'cat axis=2 space=n ${SOURCES[1:7]}')
+Plot('dd',fdmod.rrplot('symbol=. symbolsz=10',par) )
+
+# plot model real
+#---------------------------------------------------------------------------------------------
+Plot('velr',fdmod.cgrey('mean=y scalebar=y',par))
+Result('vel_real',['velr','ss','rr'],'Overlay')
+
+
+# plot model cut
+#---------------------------------------------------------------------------------------------
+Plot('velc',fdmod.cgrey('mean=y scalebar=y',par))
+Result('vel_cut',['velc','ss','rr'],'Overlay')
+
+
+# plot model migration
+#---------------------------------------------------------------------------------------------
+Plot('velm',fdmod.cgrey('mean=y scalebar=y',par))
+Result('vel_migration',['velm','ss','rr'],'Overlay')
+
+
+# plot model add
+#---------------------------------------------------------------------------------------------
+Plot('vela',fdmod.cgrey('mean=y scalebar=y',par))
+Result('vel_add',['vela','ss','rr'],'Overlay')
+
+
+# Combine GmRTM
+#---------------------------------------------------------------------------------------------
+Result('combineGmRTM',fdmod.cgrey('clip=1e-18 maxval=1e-18 minval=-1e-18 color=i',parm))
+
+# Combine RTM
+#---------------------------------------------------------------------------------------------
+Result('combineRTM',fdmod.cgrey('gainpanel=a maxval=1e-26 minval=-1e-26 color=i',parm))
+
+# Smooth GmRTM
+#---------------------------------------------------------------------------------------------
+Result('smoothGmRTM',fdmod.cgrey('gainpanel=a pclip=99 maxval=1e-15 minval=-1e-15 color=i',parm))
+
+
+# Smooth RTM
+#---------------------------------------------------------------------------------------------
+Result('smoothRTM',fdmod.cgrey('gainpanel=a pclip=98 maxval=1e-25 minval=-1e-25 color=i',parm))
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+End()

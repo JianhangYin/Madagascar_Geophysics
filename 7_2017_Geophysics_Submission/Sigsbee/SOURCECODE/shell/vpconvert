@@ -1,0 +1,6 @@
+vpl_list=`ls *.vpl`
+
+for vplfile in $vpl_list
+do 
+	vpconvert $vplfile ${vplfile%%.vpl}.jpg
+done

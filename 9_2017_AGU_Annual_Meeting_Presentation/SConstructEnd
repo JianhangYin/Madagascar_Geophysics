@@ -1,0 +1,51 @@
+from rsf.proj import *
+import fdmod
+
+par={
+     'nt':400,   'ot':0,           'dt':0.001,  'lt':'t',     'ut':'s',
+     'nx':60,    'ox':-0.03,       'dx':0.008,   'lx':'East',  'ux':'km',
+     'ny':50,    'oy':-0.06,       'dy':0.008,   'ly':'North', 'uy':'km',
+     'nz':50,    'oz':2.5,         'dz':0.008,   'lz':'Depth', 'uz':'km',
+     'kt':0,     'nb':200,         'jsnap':1,    'jdata':1
+    }
+fdmod.param(par)
+
+Flow('wavefield',['wavefield1x','wavefield2x','wavefield3x','wavefield4x'],
+     '''
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]}
+     ''')
+
+
+Flow('image','wavefield',
+     '''
+     stack axis=4
+     ''')
+
+Result('image',
+       '''
+       byte |
+       grey3 frame1=23 frame2=17 frame3=11 
+       ''')
+Result('wavefield1',
+       '''
+       byte clip=1e-5| 
+       grey4 frame1=7 frame2=46 frame3=10
+       ''') 
+Result('wavefield2',
+       '''
+       byte clip=1e-5|
+       grey4 frame1=3 frame2=32 frame3=46
+       ''')
+Result('wavefield3',
+       '''
+       byte clip=1e-5|
+       grey4 frame1=23 frame2=32 frame3=46
+       ''')
+Result('wavefield4',
+       '''
+       byte clip=1e-5|
+       grey4 frame1=38 frame2=32 frame3=46
+       ''')
+
+End()
+

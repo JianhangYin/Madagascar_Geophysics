@@ -1,0 +1,28 @@
+from rsf.proj import*
+import fdmod
+
+par={
+   'nt':10000,   'ot':0,       'dt':0.001,     'lt':'Time',       'ut':'s',
+   'nx':1600,   'ox':3.048,   'dx':0.00762,   'lx':'Distance',   'ux':'km',
+   'nz':800,    'oz':0.762,   'dz':0.00762,   'lz':'Depth',      'uz':'km' ,
+   'kt':100,    'nb':100,     'jsnap':1,      'jdata':1,         'free':'n',
+   'snap':'n',  'scalebar':'y'
+    }
+fdmod.param(par)
+
+
+Flow('datasum-j100','data-j100','cp')
+for j in range(101,200):
+	jtag = "-j%03d"%j
+	ktag = "-j%03d"%(j-1)
+	Flow('datan'+jtag,'data'+jtag,'put n3=1')
+	Flow('datasum'+jtag,['datasum'+ktag,'datan'+jtag],
+	'''
+	cat axis=3 ${SOURCES[1]} |
+	put o3=3.048 d3=0.01524
+	''') 
+	Flow('tmp'+jtag,None,'rm datasum%s.rsf'%ktag)
+
+	
+
+End()

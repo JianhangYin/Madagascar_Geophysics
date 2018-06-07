@@ -1,0 +1,67 @@
+from rsf.proj import *
+
+Program('cmp2shot.x','cmp2shot.c')
+
+###########################################################################################
+################################# datacmp - datashot ######################################
+###########################################################################################
+
+Flow('data-shot2',['data-cmp', 'cmp2shot.x'],
+     '''
+     ./cmp2shot.x
+     ''')
+
+# plotting datashot #
+Result('data-shot',
+       '''
+       byte |
+       grey3 flat=y frame1=3000 frame3=400 frame2=400
+       label1=Time unit1=s 
+       label2=Midpoint unit2=km
+       label3=Half-Offset unit3=km 
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="CMP_gathers" point1=0.8 point2=0.8 
+       ''')
+
+# plotting datacmp #
+Result('data-cmp',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label2=Midpoint unit2=km
+       label3=Half-Offset unit3=km 
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="CMP_gathers" point1=0.8 point2=0.8 
+       ''')
+
+# plotting recovered datashot #
+Result('data-shot2',
+       '''
+       byte |
+       grey3 flat=y frame1=5000 frame3=0 frame2=300
+       label1=Time unit1=s 
+       label2=Midpoint unit2=km
+       label3=Half-Offset unit3=km 
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="CMP_gathers" point1=0.8 point2=0.8 
+       ''')
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

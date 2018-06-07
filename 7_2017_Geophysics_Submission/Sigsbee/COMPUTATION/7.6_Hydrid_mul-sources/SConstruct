@@ -1,0 +1,48 @@
+from rsf.proj import *
+import fdmod
+
+###########################################################################################
+####################################### RTM/GmRTM #########################################
+#################################### source: (7,0) km ##################################### 
+################### receiver: (4,0), (5,0), (6,0), (8,0), (9,0), km #######################
+###########################################################################################
+
+par={
+     'nt':10000,  'ot':0,         'dt':0.001,    'lt':'t', 'ut':'s',
+     'nx':390,    'ox':4.00369,      'dx':0.01143,  'lx':'x', 'ux':'km',
+     'nz':500,    'oz':3.048,     'dz':0.00762,  'lz':'z', 'uz':'km',
+     'kt':100,    'nb':100,  'jsnap':1,  'jdata':1
+    }
+fdmod.param(par)
+
+###########################################################################################
+####################################### Plotting ########################################## 
+###########################################################################################
+
+Flow('image_RTM',['image_1_RTM','image_2_RTM','image_3_RTM','image_4_RTM','image_5_RTM'],
+     '''
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]} 
+     ''')
+
+Flow('image_GmRTM',['image_1_GmRTM','image_2_GmRTM','image_3_GmRTM','image_4_GmRTM','image_5_GmRTM'],
+     '''
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}  
+     ''')
+
+Flow('image_CRS_RTM',['image_1_CRS_RTM','image_2_CRS_RTM','image_3_CRS_RTM','image_4_CRS_RTM','image_5_CRS_RTM'],
+     '''
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}  
+     ''')
+
+Flow('image_CRS_GmRTM',['image_1_CRS_GmRTM','image_2_CRS_GmRTM','image_3_CRS_GmRTM','image_4_CRS_GmRTM','image_5_CRS_GmRTM'],
+     '''
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}  
+     ''')
+
+Result('image_RTM',fdmod.cgrey('clip=1e-21 color=i  scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+Result('image_GmRTM',fdmod.cgrey('clip=1e3 color=i  scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+Result('image_CRS_RTM',fdmod.cgrey('color=i  scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+Result('image_CRS_GmRTM',fdmod.cgrey('clip=7e11 color=i  scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+
+
+End()

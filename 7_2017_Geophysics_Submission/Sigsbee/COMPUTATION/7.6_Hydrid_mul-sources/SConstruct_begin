@@ -1,0 +1,260 @@
+from rsf.proj import *
+import fdmod
+
+###########################################################################################
+####################################### RTM/GmRTM #########################################
+####################################    5 sources     ##################################### 
+#####################################    4.98348     ######################################
+#####################################    5.98932     ######################################
+#####################################    6.99516     ######################################
+#####################################    8.001       ######################################
+#####################################    9.00684     ######################################
+################################## receiver: 6 group  #####################################
+###########################################################################################
+
+par={
+     'nt':10000,  'ot':0,         'dt':0.001,    'lt':'t', 'ut':'s',
+     'nx':564,    'ox':3.055,     'dx':0.01143,  'lx':'x', 'ux':'km',
+     'nz':800,    'oz':0.762,     'dz':0.00762,  'lz':'z', 'uz':'km',
+     'kt':100,    'nb':100,       'jsnap':1,     'jdata':1
+    }
+fdmod.param(par)
+
+###########################################################################################
+########################################### model #########################################
+###########################################################################################
+
+# Source #
+for i in range(1,6,1):
+	j=4.98348+i*0.01524*66-0.01524*66
+	Flow('Fsou_%d' %i,None,
+	     '''
+	     spike n1=2 nsp=2 k1=1,2 mag=%f,0.762 o1=0 o2=0
+	     ''' %j)	
+# fake source #
+Flow('Fsou',None,
+     '''
+     spike n1=2 nsp=2 k1=1,2 mag=6,0.762 o1=0 o2=0
+     ''')
+
+# Receiver Group GmRTM #
+for i in range(1,7,1):
+	fdmod.boxarray('Frec_1_%d' %i,
+        	         1,par['oz'],par['dz'],
+        	         42, 4.17576+i*0.01524-0.01524, 0.01524*6, par)
+	fdmod.boxarray('Frec_2_%d' %i,
+        	         1,par['oz'],par['dz'],
+        	         54, 4.00812+i*0.01524-0.01524, 0.01524*6, par)
+	fdmod.boxarray('Frec_3_%d' %i,
+        	         1,par['oz'],par['dz'],
+        	         44, 4.98348+i*0.01524-0.01524, 0.01524*6, par)
+	fdmod.boxarray('Frec_4_%d' %i,
+        	         1,par['oz'],par['dz'],
+        	         33, 5.98932+i*0.01524-0.01524, 0.01524*6, par)
+	fdmod.boxarray('Frec_5_%d' %i,
+        	         1,par['oz'],par['dz'],
+        	         22, 6.99516+i*0.01524-0.01524, 0.01524*6, par)
+
+# Receivers RTM #
+fdmod.boxarray('Frec_1_r',
+        	1,par['oz'],par['dz'],
+        	252, 4.17576, 0.01524, par)
+fdmod.boxarray('Frec_2_r',
+        	1,par['oz'],par['dz'],
+        	329, 4.00812, 0.01524, par)
+fdmod.boxarray('Frec_3_r',
+        	1,par['oz'],par['dz'],
+        	265, 4.98348, 0.01524, par)
+fdmod.boxarray('Frec_4_r',
+        	1,par['oz'],par['dz'],
+        	199, 5.98932, 0.01524, par)
+fdmod.boxarray('Frec_5_r',
+        	1,par['oz'],par['dz'],
+        	133, 6.99516, 0.01524, par)
+
+# Density #
+Flow('Fden',None,
+     '''
+     math output="1"
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g
+     ''' % par)
+
+# Wavelet
+fdmod.wavelet('wav_',15,par)
+Flow('Fwav', 'wav_','transp')
+
+###########################################################################################
+################################### Forward wavefield #####################################
+###########################################################################################
+
+for i in range(1,6,1):
+	fdmod.awefd('Fdat_%d' %i,'Fwfl_%d' %i,
+        	    'Fwav',
+        	    'velm','Fden',
+        	    'Fsou_%d' %i,'Fsou_%d' %i,'free=n',par)
+
+###########################################################################################
+#################################### Data extraction ######################################
+###########################################################################################
+
+# data extraction group GmRTM #
+for i in range(1,7,1):
+###########################################################################################
+	a=75+i-1
+	b=64+i-1
+	c=128+i-1
+	d=194+i-1
+	e=260+i-1
+
+	Flow('D_data_1_%d' %i,'diffractionSHOT',
+	     '''
+             window f2=%d n2=42 j2=6 f3=128 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %a)
+	Flow('D_data_2_%d' %i,'diffractionSHOT',
+	     '''
+             window f2=%d n2=54 j2=6 f3=194 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %b)
+	Flow('D_data_3_%d' %i,'diffractionSHOT',
+	     '''
+             window f2=%d n2=44 j2=6 f3=260 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %c)
+	Flow('D_data_4_%d' %i,'diffractionSHOT',
+	     '''
+             window f2=%d n2=33 j2=6 f3=326 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %d)
+	Flow('D_data_5_%d' %i,'diffractionSHOT',
+	     '''
+             window f2=%d n2=22 j2=6 f3=392 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %e)
+###########################################################################################	
+	Flow('O_data_1_%d' %i,'data-shot2',
+	     '''
+             window f2=%d n2=42 j2=6 f3=128 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %a)
+	Flow('O_data_2_%d' %i,'data-shot2',
+	     '''
+             window f2=%d n2=54 j2=6 f3=194 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %b)
+	Flow('O_data_3_%d' %i,'data-shot2',
+	     '''
+             window f2=%d n2=44 j2=6 f3=260 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %c)
+	Flow('O_data_4_%d' %i,'data-shot2',
+	     '''
+             window f2=%d n2=33 j2=6 f3=326 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %d)
+	Flow('O_data_5_%d' %i,'data-shot2',
+	     '''
+             window f2=%d n2=22 j2=6 f3=392 n3=1 |
+	     transp plane=12 | 
+	     reverse which=2 opt=i
+	     ''' %e)
+###########################################################################################
+# data extraction RTM #
+
+Flow('D_data_1_r','diffractionSHOT',
+     '''
+     window f2=75 n2=252 f3=128 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('D_data_2_r','diffractionSHOT',
+     '''
+     window f2=64 n2=329 f3=194 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('D_data_3_r','diffractionSHOT',
+     '''
+     window f2=128 n2=265 f3=260 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('D_data_4_r','diffractionSHOT',
+     '''
+     window f2=194 n2=199 f3=326 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('D_data_5_r','diffractionSHOT',
+     '''
+     window f2=260 n2=133 f3=392 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+###########################################################################################
+Flow('O_data_1_r','data-shot2',
+     '''
+     window f2=75 n2=252 f3=128 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('O_data_2_r','data-shot2',
+     '''
+     window f2=64 n2=329 f3=194 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('O_data_3_r','data-shot2',
+     '''
+     window f2=128 n2=265 f3=260 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('O_data_4_r','data-shot2',
+     '''
+     window f2=194 n2=199 f3=326 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+Flow('O_data_5_r','data-shot2',
+     '''
+     window f2=260 n2=133 f3=392 n3=1 |
+     transp plane=12 | 
+     reverse which=2 opt=i
+     ''')
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

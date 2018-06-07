@@ -1,0 +1,462 @@
+from rsf.proj import *
+import fdmod
+
+Program('Extract.x','Extract.c')
+
+# Plot 3D traveltime
+def gplot(x0):
+    return '''
+    transp |
+    graph3 frame1=2 frame3=0 frame2=%d
+    wanttitle=n wantaxis=n min=4 max=0 plotfat=3
+    point1=0.8 point2=0.8 plotcol=3
+    ''' % int(x0/0.025)
+# Plot 3D data (midpoint indicated)
+def kplot(x0):
+    return '''
+    byte |
+    transp plane=23 memsize=1000 |
+    grey3 flat=y frame1=500 frame3=0 frame2=%d
+    label1=Time unit1=s 
+    label3=Half-Offset unit3=km 
+    label2=Midpoint unit2=km
+    title=Data point1=0.8 point2=0.8 
+    ''' % int(x0/0.025)
+# Plot 2D traveltime
+def tplot(title):
+    return '''
+    grey color=j bias=2 scalebar=y barlabel=Time barunit=s barreverse=y
+    title="%s" label1=Half-Offset unit1=km label2=Midpoint unit2=km
+    ''' % title
+# Plot offset-time data
+def hoplot(title):
+    return'''
+    transp plane=12 |
+    grey gainpanel=a label1=Time unit1=s label2=Half-offset unit2=km title="%s"
+    '''% title
+
+# Parameters
+
+# estimated travel time
+t0 = 1.345
+
+# midpoint involved
+dx=0.1
+
+# Reflector
+Flow('reflector',None,
+     '''
+     spike mag=1.1,1.2,1.4,1.5,10,-8.7,10,-8.7,10,-8.7,1.6,1.8,1.9,2.1,2.2,2,1.7 nsp=17
+     o1=-5 o2=0 d1=0.01 d2=1 
+     k1=0,0,0,0,0,899,0,999,0,1099,0,0,0,0,0,0,0
+     l1=2000,2000,2000,2000,2000,901,2000,1001,2000,1101,2000,2000,2000,2000,2000,2000,2000
+     k2=1,2,3,4,5,5,6,6,7,7,8,9,10,11,12,13,14
+     l2=1,2,3,4,5,5,6,6,7,7,8,9,10,11,12,13,14
+     n1=2000 n2=14
+     ''')
+
+#Plot('reflector',
+#     '''
+#     graph min2=0 max2=4.5 min1=0 max1=10
+#     yreverse=y plotcol=3 plotfat=10
+#     wantaxis=n wanttitle=n scalebar=y pad=n
+#     screenratio=1 screenht=10 symbol=-
+#     ''')
+
+# Data (cmp)
+Flow('data pick','reflector',
+     '''
+     kirmod cmp=y 
+     nh=161 dh=0.025 h0=0
+     ns=401 ds=0.025 s0=0
+     freq=10 dt=0.004 nt=1001
+     vel=1.5 verb=y 
+     picks=${TARGETS[1]} |
+     put d2=0.0125
+     ''')
+
+# Plot data (cmp)
+Result('data',
+       '''
+       byte |
+       transp plane=23 |
+       grey3 flat=y frame1=500 frame3=0 frame2=200
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       title=Data point1=0.8 point2=0.8 
+       ''')
+
+Plot('data',
+       '''
+       byte |
+       transp plane=23 memsize=1000 |
+       grey3 flat=y frame1=500 frame3=0 frame2=200
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       title=Data point1=0.8 point2=0.8 
+       ''')
+
+# Pick traveltime
+for pi in range(1,15):
+     Flow('pick%d' %pi, 'pick',
+          '''
+          window f1=%d n1=1 | 
+          put d1=0.0125 d3=0.004
+          ''' %(pi-1))
+     Plot('pick%d' %pi,gplot(5))
+     Result('datapick%d' %pi,'data pick%d' %pi,'Overlay')
+
+Result('datapick','data pick1 pick2 pick3 pick4 pick5 pick6 pick7 pick8 pick9 pick10 pick11 pick12 pick13 pick14','Overlay')
+
+# Initail crs parameters
+Flow('zero',None,'spike n1=4 k1=1 mag=%g' % t0)
+
+# Loop travel time
+for p0 in range(1,15):
+
+    # Loop midpoint
+    for xx0 in range(160,241,20):
+        x0=xx0*0.025 
+        datax='Pick%d-data%d' %(p0,xx0)
+        weight='Pick%d-weight%d' %(p0,xx0)
+        Flow(weight,'pick%d' %p0,'math output=1/input | cut min2=%g | cut max2=%g | cut min1=%g' % (x0+dx,x0-dx,dx))
+        Plot(datax,'data',kplot(x0))
+        coef = 'zero'
+
+        # Newton literation
+        for iter in range(20):
+            time = 'pick%d-time%d-%d'% (p0,iter,xx0)
+            fit = 'pick%d-fit%d-%d' % (p0,iter,xx0)
+    
+            Flow([time,fit],['pick%d' %p0,coef],
+                 '''
+                 mffit coef=${SOURCES[1]} fit=${TARGETS[1]}
+                 type=%s x0=%g
+                 ''' % ('crs',x0))
+    
+            match = 'pick%d-match%d-%d'% (p0,iter,xx0)
+            coef2 = 'pick%d-coef%d-%d'% (p0,iter,xx0)
+
+            Flow('d'+coef2,['pick%d' %p0,time,fit,weight],
+                 '''
+                 add mode=p ${SOURCES[0]} |
+                 add scale=1,-1 ${SOURCES[1]} |
+                 lsfit coef=$TARGET fit=${SOURCES[2]} weight=${SOURCES[3]}
+                 ''',stdout=0)
+            Flow(coef2,['d'+coef2,coef],'add ${SOURCES[1]}')
+     
+            coef = coef2
+
+        # Calculate the coef
+        
+        # Approximation Travel Time
+        Flow('pick%d-mid%d-tn' %(p0,xx0),coef,'window f1=0 n1=1')
+        # A2
+        Flow('pick%d-mid%d-a2' %(p0,xx0),coef,'window f1=2 n1=1')
+        # A3
+        Flow('pick%d-mid%d-a3' %(p0,xx0),coef,'window f1=3 n1=1')
+        # Tf (Criterion)
+        Flow('pick%d-mid%d-criterion' %(p0,xx0),['pick%d-mid%d-a2' %(p0,xx0),'pick%d-mid%d-a3' %(p0,xx0)],
+             '''
+             math xx1=${SOURCES[0]} xx2=${SOURCES[1]} output="exp(-abs(xx2-xx1)/abs(xx2+xx1))"
+             ''')
+
+        # traveltime calculated by CRS
+        fit = 'pick%d-fit%d' % (p0,xx0)
+        Flow(fit,time,'math output="sqrt(input)" ')  
+        Plot(fit+'g',fit,gplot(x0))
+        # Result('pick%d-data%d' % (p0,xx0),[datax,fit+'g'],'Overlay')
+	
+        # original data at midpoint xx0
+	Flow('pick%d-mid%d-oridata' %(p0,xx0),'data.rsf',
+	'''
+	transp plane=12 |
+	window f3=%d n3=1
+	''' %xx0)
+	# picktime at midpoint xx0
+	Flow('pick%d-mid%d-picktime' %(p0,xx0),'pick%d.rsf' %p0,
+	'''
+	transp plane=23 |
+	window f3=%d n3=1
+	''' %xx0)
+	# Extract data based on TF
+        Flow('pick%d-mid%d-Extractdata' %(p0,xx0),['pick%d-mid%d-oridata' %(p0,xx0),'pick%d-mid%d-picktime' %(p0,xx0),'pick%d-mid%d-criterion' %(p0,xx0),'Extract.x'],
+        '''
+        ./Extract.x
+        pick=${SOURCES[1]}
+	cri=${SOURCES[2]}
+        k=10
+        ''') 
+
+	# Result('pick%d-mid%d-oridata' %(p0,xx0),hoplot('Original Data'))
+	# Result('pick%d-mid%d-Extractdata' %(p0,xx0),hoplot('Extracted Data'))
+    Flow('pick%d-midsum160-Extractdata' %p0,'pick%d-mid160-Extractdata' %p0,'cp')
+    for yy0 in range(180,241,20): 
+        Flow('pick%d-midsum%d-Extractdata' %(p0,yy0),['pick%d-midsum%d-Extractdata' %(p0,yy0-20),'pick%d-mid%d-Extractdata' %(p0,yy0)],'cat axis=3 ${SOURCES[1]}')  
+    Flow('pick%d-midsum160-oridata' %p0,'pick%d-mid160-oridata' %p0,'cp')
+    for yy0 in range(180,241,20): 
+        Flow('pick%d-midsum%d-oridata' %(p0,yy0),['pick%d-midsum%d-oridata' %(p0,yy0-20),'pick%d-mid%d-oridata' %(p0,yy0)],'cat axis=3 ${SOURCES[1]}') 
+
+Flow('DiffractionData',['pick1-midsum240-Extractdata','pick2-midsum240-Extractdata','pick3-midsum240-Extractdata','pick4-midsum240-Extractdata','pick5-midsum240-Extractdata','pick6-midsum240-Extractdata','pick7-midsum240-Extractdata','pick8-midsum240-Extractdata','pick9-midsum240-Extractdata','pick10-midsum240-Extractdata','pick11-midsum240-Extractdata','pick12-midsum240-Extractdata','pick13-midsum240-Extractdata','pick14-midsum240-Extractdata'],
+     '''
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]} ${SOURCES[5]} ${SOURCES[6]} ${SOURCES[7]} ${SOURCES[8]} ${SOURCES[9]} ${SOURCES[10]} ${SOURCES[11]} ${SOURCES[12]} ${SOURCES[13]} |
+     transp plane=12
+     ''') 
+Flow('OriginData',['pick1-midsum240-oridata','pick2-midsum240-oridata','pick3-midsum240-oridata','pick4-midsum240-oridata','pick5-midsum240-oridata','pick6-midsum240-oridata','pick7-midsum240-oridata','pick8-midsum240-oridata','pick9-midsum240-oridata','pick10-midsum240-oridata','pick11-midsum240-oridata','pick12-midsum240-oridata','pick13-midsum240-oridata','pick14-midsum240-oridata'],
+     '''
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]} ${SOURCES[5]} ${SOURCES[6]} ${SOURCES[7]} ${SOURCES[8]} ${SOURCES[9]} ${SOURCES[10]} ${SOURCES[11]} ${SOURCES[12]} ${SOURCES[13]} |
+     transp plane=12
+     ''')
+
+Result('DiffractionData',
+       '''
+       byte |
+       transp plane=23 |
+       put d2=0.5 |
+       grey3 flat=y frame1=500 frame3=0 frame2=200
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       title=Data point1=0.8 point2=0.8 
+       ''')
+Result('OriginData',
+       '''
+       byte |
+       transp plane=23 |
+       put d2=0.5 |
+       grey3 flat=y frame1=500 frame3=0 frame2=200
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       title=Data point1=0.8 point2=0.8 
+       ''')
+
+for k in range(-2,3,1):
+     Flow('GmRTM_data%d' %(k+5),'DiffractionData',
+          '''
+          window f2=%d n2=1 f3=%d n3=1 |
+          transp plane=12 |
+          reverse which=2 opt=i
+          ''' %(abs(k)*40,k+2))
+for k in range(-2,3,1):
+     Flow('GmRTM_data%d_origin' %(k+5),'OriginData',
+          '''
+          window f2=%d n2=1 f3=%d n3=1 |
+          transp plane=12 |
+          reverse which=2 opt=i
+          ''' %(abs(k)*40,k+2))
+
+# The location of source is (5,0) km, and the receivers are (3,0), (4,0), (5,0), (6,0), (7,0).
+
+par1={
+     'nt':1201,  'ot':-0.8, 'dt':0.004, 'lt':'t', 'ut':'s',
+     'nx':1001,  'ox':0,    'dx':0.01,  'lx':'x', 'ux':'km',
+     'nz':451,   'oz':0,    'dz':0.01,  'lz':'z', 'uz':'km',
+     'kt':200,   'nb':100,  'jsnap':1,  'jdata':1
+    }
+fdmod.param(par1)
+
+par2={
+     'nt':1001,  'ot':0,    'dt':0.004, 'lt':'t', 'ut':'s',
+     'nx':1001,  'ox':0,    'dx':0.01,  'lx':'x', 'ux':'km',
+     'nz':451,   'oz':0,    'dz':0.01,  'lz':'z', 'uz':'km',
+     'kt':200,   'nb':100,  'jsnap':1,  'jdata':1,'scalebar':'y'
+    }
+fdmod.param(par2)
+     
+#Source
+Flow('Fsou',None,
+'''
+spike n1=2 nsp=2 k1=1,2 mag=5,0 o1=0 o2=0
+''')
+
+#Receiver
+Flow('Frec',None,
+     '''
+     spike 
+     n1=2 n2=5
+     nsp=10
+     k1=1,2,1,2,1,2,1,2,1,2
+     l1=1,2,1,2,1,2,1,2,1,2
+     k2=1,1,2,2,3,3,4,4,5,5
+     l2=1,1,2,2,3,3,4,4,5,5
+     mag=3,0,4,0,5,0,6,0,7,0
+     o1=0 o2=0
+     ''')
+
+# Velocity
+Flow('Fvel',None,
+     '''
+     math output="1.5"
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g
+     ''' % par1)
+Plot('Fvel','Fvel',fdmod.cgrey('label1=Depth unit1=km label2=Distance unit2=km title=Velocity Model',par2))
+Plot('reflector',fdmod.cgraph('plotcol=3 plotfat=5 min2=0 max2=4.5 min1=0 max1=10 symbol=-',par2))
+Result('Velocity','Fvel reflector','Overlay')
+
+# Density
+Flow('Fden',None,
+     '''
+     math output="1"
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g
+     ''' % par1)
+
+# Wavelet
+fdmod.wavelet('wav_',10,par1)
+Flow('Fwav', 'wav_','transp')
+
+# Forward wavefield
+fdmod.awefd('dat','wfl',
+            'Fwav',
+            'Fvel','Fden',
+            'Fsou','Frec','free=n',par1)
+Flow('Fwfl','wfl','window f3=200 n3=1001')
+Flow('Fdat','dat','window f2=200 n2=1001')
+# Result('Fwfl',fdmod.cgrey('pclip=99.9',par2))
+
+#GmRTM
+for i in range(3,8,1):
+     # Extract the location of receivers
+     Flow('Loc_rec_%d' %i,'Frec',
+          '''
+          window f2=%d n2=1
+          ''' %(i-3))
+     # Backward the wave from receivers
+     fdmod.awefd('Tempdata%d' %i,'Bwfl_%d' %i,
+                 'GmRTM_data%d' %i,
+                 'Fvel','Fden',
+                 'Loc_rec_%d' %i,'Fsou','free=n',par2)
+     fdmod.awefd('Tempdata%d_origin' %i,'Bwfl_%d_origin' %i,
+                 'GmRTM_data%d_origin' %i,
+                 'Fvel','Fden',
+                 'Loc_rec_%d' %i,'Fsou','free=n',par2)
+     # reverse the wavefield along the tiem axis
+     Flow('Rwfl_%d' %i,'Bwfl_%d' %i,
+          '''
+          math output="input*1e5" |
+          reverse which=4 opt=i verb=y
+          ''')
+     Flow('Rwfl_%d_rtm' %i,'Bwfl_%d' %i,
+          '''
+          reverse which=4 opt=i verb=y
+          ''')
+     Flow('Rwfl_%d_origin' %i,'Bwfl_%d_origin' %i,
+          '''
+          math output="input*1e5" |
+          reverse which=4 opt=i verb=y
+          ''')
+     Flow('Rwfl_%d_origin_rtm' %i,'Bwfl_%d_origin' %i,
+          '''
+          reverse which=4 opt=i verb=y
+          ''')
+
+# multiply all the backward wavefield
+Flow('Wavefield1',['Rwfl_3', 'Rwfl_4', 'Rwfl_5', 'Rwfl_6', 'Rwfl_7'],
+     ''' 
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+Flow('Wavefield1_rtm',['Rwfl_3_rtm', 'Rwfl_4_rtm', 'Rwfl_5_rtm', 'Rwfl_6_rtm', 'Rwfl_7_rtm'],
+     ''' 
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+Flow('Wavefield1_origin',['Rwfl_3_origin', 'Rwfl_4_origin', 'Rwfl_5_origin', 'Rwfl_6_origin', 'Rwfl_7_origin'],
+     ''' 
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+Flow('Wavefield1_origin_rtm',['Rwfl_3_origin_rtm', 'Rwfl_4_origin_rtm', 'Rwfl_5_origin_rtm', 'Rwfl_6_origin_rtm', 'Rwfl_7_origin_rtm'],
+     ''' 
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+# multiply the forward wavefield
+Flow('Wavefield2',['Wavefield1', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+Flow('Wavefield2_rtm',['Wavefield1_rtm', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+Flow('Wavefield2_origin',['Wavefield1_origin', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+Flow('Wavefield2_origin_rtm',['Wavefield1_origin_rtm', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+
+
+# stack along the time axis
+Flow('image_CRS_GmRTM','Wavefield2',
+     '''
+     stack axis=3
+     ''')
+Flow('image_CRS_RTM','Wavefield2_rtm',
+     '''
+     stack axis=3
+     ''')
+Flow('image_GmRTM','Wavefield2_origin',
+     '''
+     stack axis=3
+     ''')
+Flow('image_RTM','Wavefield2_origin_rtm',
+     '''
+     stack axis=3
+     ''')
+
+Result('image_CRS_GmRTM',fdmod.cgrey('clip=1e-25 maxval=1e-25 minval=-1e-25 label1=Depth unit1=km label2=Distance unit2=km title=CRS_GmRTM_Imaging',par2))
+
+Result('image_CRS_RTM',fdmod.cgrey('scalebar=y label1=Depth unit1=km label2=Distance unit2=km title=CRS_RTM_Imaging',par2))
+
+Result('image_GmRTM',fdmod.cgrey('clip=1e-20 maxval=1e-20 minval=-1e-20 scalebar=y label1=Depth unit1=km label2=Distance unit2=km title=GmRTM_Imaging',par2))
+
+Result('image_RTM',fdmod.cgrey('scalebar=y label1=Depth unit1=km label2=Distance unit2=km title=RTM_Imaging',par2))
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,59 @@
+from rsf.proj import *
+import fdmod
+
+
+par={
+     'nt':10000,  'ot':0,         'dt':0.001,    'lt':'t', 'ut':'s',
+     'nx':564,   'ox':3.055,      'dx':0.01143,  'lx':'x', 'ux':'km',
+     'nz':800,   'oz':0.762,     'dz':0.00762,  'lz':'z', 'uz':'km',
+     'kt':100,   'nb':100,  'jsnap':1,  'jdata':1
+    }
+fdmod.param(par)
+
+# SOURCE 5 GROUP 6 # 
+# Backward the wave from receivers #
+fdmod.awefd('Tempdata_5_6_d','Bwfl_5_6_d',
+            'D_data_5_6',
+            'velm','Fden',
+            'Frec_5_6','Fsou','free=n',par)
+fdmod.awefd('TempdataR_5_6_o','Bwfl_5_6_o',
+            'O_data_5_6',
+            'velm','Fden',
+            'Frec_5_6','Fsou','free=n',par)
+# reverse the wavefield along the tiem axis
+Flow('Rwfl_5_6_d','Bwfl_5_6_d',
+     '''
+     math output="input*1e15" |
+     reverse which=4 opt=i verb=y
+     ''')
+Flow('Rwfl_5_6_o','Bwfl_5_6_o',
+     '''
+     math output="input*1e15" |
+     reverse which=4 opt=i verb=y
+     ''')
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

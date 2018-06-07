@@ -1,0 +1,153 @@
+from rsf.proj import*
+import fdmod
+
+# parameter
+#----------------------------------------------------------------------------------------------
+par={
+   'nt':2000,  'ot':0,  'dt':0.0005,  'lt':'t',        'ut':'s',
+   'nx':200,   'ox':0,  'dx':4,       'lx':'Distance', 'ux':'m',
+   'nz':200,   'oz':0,  'dz':4,       'lz':'Depth',    'uz':'m',
+   'kt':200,   'scalebar':'y',        'ratio':0.87,     'height':9,
+    }
+fdmod.param(par)
+par['xsou']=400
+par['zsou']=5
+
+par['x1rec1']=5
+par['z1rec1']=400
+par['x1rec2']=792
+par['z1rec2']=400
+par['x1rec3']=400
+par['z1rec3']=792
+
+par['x2rec1']=5
+par['z2rec1']=400
+par['x2rec2']=792
+par['z2rec2']=400
+par['x2rec3']=400
+par['z2rec3']=792
+par['x2rec4']=117
+par['z2rec4']=117
+par['x2rec5']=117
+par['z2rec5']=683
+par['x2rec6']=683
+par['z2rec6']=117
+par['x2rec7']=683
+par['z2rec7']=683
+
+par['x3rec1']=5
+par['z3rec1']=400
+par['x3rec2']=792
+par['z3rec2']=400
+par['x3rec3']=400
+par['z3rec3']=792
+par['x3rec4']=200
+par['z3rec4']=54
+par['x3rec5']=600
+par['z3rec5']=54
+par['x3rec6']=200
+par['z3rec6']=746
+par['x3rec7']=600
+par['z3rec7']=746
+par['x3rec8']=54
+par['z3rec8']=200
+par['x3rec9']=746
+par['z3rec9']=200
+par['x3rec10']=54
+par['z3rec10']=600
+par['x3rec11']=746
+par['z3rec11']=600
+
+#---------------------------------------------------------------------------------------------
+# source and receivers
+#---------------------------------------------------------------------------------------------
+fdmod.point('ss',par['xsou'],par['zsou'],par)
+
+fdmod.point('1rr1',par['x1rec1'],par['z1rec1'],par)
+fdmod.point('1rr2',par['x1rec2'],par['z1rec2'],par)
+fdmod.point('1rr3',par['x1rec3'],par['z1rec3'],par)
+
+
+fdmod.point('2rr1',par['x2rec1'],par['z2rec1'],par)
+fdmod.point('2rr2',par['x2rec2'],par['z2rec2'],par)
+fdmod.point('2rr3',par['x2rec3'],par['z2rec3'],par)
+fdmod.point('2rr4',par['x2rec4'],par['z2rec4'],par)
+fdmod.point('2rr5',par['x2rec5'],par['z2rec5'],par)
+fdmod.point('2rr6',par['x2rec6'],par['z2rec6'],par)
+fdmod.point('2rr7',par['x2rec7'],par['z2rec7'],par)
+
+fdmod.point('3rr1',par['x3rec1'],par['z3rec1'],par)
+fdmod.point('3rr2',par['x3rec2'],par['z3rec2'],par)
+fdmod.point('3rr3',par['x3rec3'],par['z3rec3'],par)
+fdmod.point('3rr4',par['x3rec4'],par['z3rec4'],par)
+fdmod.point('3rr5',par['x3rec5'],par['z3rec5'],par)
+fdmod.point('3rr6',par['x3rec6'],par['z3rec6'],par)
+fdmod.point('3rr7',par['x3rec7'],par['z3rec7'],par)
+fdmod.point('3rr8',par['x3rec8'],par['z3rec8'],par)
+fdmod.point('3rr9',par['x3rec9'],par['z3rec9'],par)
+fdmod.point('3rr10',par['x3rec10'],par['z3rec10'],par)
+fdmod.point('3rr11',par['x3rec11'],par['z3rec11'],par)
+
+
+Flow('1rr',['1rr1','1rr2','1rr3'],'cat axis=2 space=n ${SOURCES[1:3]}')
+Flow('2rr',['2rr1','2rr2','2rr3','2rr4','2rr5','2rr6','2rr7'],'cat axis=2 space=n ${SOURCES[1:7]}')
+Flow('3rr',['3rr1','3rr2','3rr3','3rr4','3rr5','3rr6','3rr7','3rr8','3rr9','3rr10','3rr11'],'cat axis=2 space=n ${SOURCES[1:11]}')
+Plot('ss',fdmod.ssplot('symbol=* symbolsz=6 plotcol=2 plotfat=2',par) )
+Plot('1rr',fdmod.rrplot('symbol=. symbolsz=20 plotcol=1',par) )
+Plot('2rr',fdmod.rrplot('symbol=. symbolsz=20 plotcol=1',par) )
+Plot('3rr',fdmod.rrplot('symbol=. symbolsz=20 plotcol=1',par) )
+
+
+# plot velocity model 
+#---------------------------------------------------------------------------------------------
+Plot('vel',fdmod.cgrey('mean=y scalebar=y',par))
+Result('vel_1',['vel','ss','1rr'],'Overlay')
+Result('vel_2',['vel','ss','2rr'],'Overlay')
+Result('vel_3',['vel','ss','3rr'],'Overlay')
+
+# Combine GmRTM
+#---------------------------------------------------------------------------------------------
+Plot('GmRTM1',fdmod.cgrey('clip=1e-15 maxval=1e-15 minval=-1e-15 color=i',par))
+Result('GmRTM_1',['GmRTM1','ss','1rr'],'Overlay')
+Plot('GmRTM2',fdmod.cgrey('clip=1e-20 maxval=1e-20 minval=-1e-20 color=i',par))
+Result('GmRTM_2',['GmRTM2','ss','2rr'],'Overlay')
+Plot('GmRTM3',fdmod.cgrey('clip=1e-25 maxval=1e-25 minval=-1e-25 color=i',par))
+Result('GmRTM_3',['GmRTM3','ss','3rr'],'Overlay')
+Plot('RTM1',fdmod.cgrey('clip=1e-25 maxval=1e-25 minval=-1e-25 color=i',par))
+Result('RTM_1',['RTM1','ss','1rr'],'Overlay')
+Plot('RTM2',fdmod.cgrey('clip=1e-25 maxval=1e-25 minval=-1e-25 color=i',par))
+Result('RTM_2',['RTM2','ss','2rr'],'Overlay')
+Plot('RTM3',fdmod.cgrey('clip=1e-25 maxval=1e-25 minval=-1e-25 color=i',par))
+Result('RTM_3',['RTM3','ss','3rr'],'Overlay')
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+End()

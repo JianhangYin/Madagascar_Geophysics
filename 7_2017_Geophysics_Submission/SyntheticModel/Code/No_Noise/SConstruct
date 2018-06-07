@@ -1,0 +1,371 @@
+from rsf.proj import *
+import constant
+import fdmod
+
+Program('Automatic.x','Automatic.c')
+Program('Linear.x','Linear.c')
+Program('Hyperbolic.x','Hyperbolic.c')
+Program('Tf.x','Tf.c')
+Program('Travelpick.x','Travelpick.c')
+Program('Extract3D.x','Extract3D.c')
+
+par={
+     'nx':351,   'ox':-1,   'dx':0.01,  'lx':'Distance', 'ux':'km',
+     'nz':1500,  'oz':0,    'dz':0.004, 'lz':'Time',     'uz':'s',
+     'scalebar':'y'
+    }
+fdmod.param(par)
+
+# Modeling #
+constant.get_cmps('cmp0')
+
+# No Noise (null)
+Flow('null',None,
+     '''
+     spike nsp=1 mag=0
+     n1=1500 d1=0.004 o1=0
+     n2=201  d2=0.005 o2=0
+     n3=351  d3=0.01  o3=-1 |
+     transp plane=23
+     ''')
+
+# Data (data)
+Flow('data',['cmp0','null'],'transp plane=23 | add ${SOURCES[1]}')
+
+Result('data',
+       '''
+       byte |
+       grey3 flat=y frame1=750 frame3=0 frame2=175
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="CMP_gathers" point1=0.8 point2=0.8 
+       ''')
+
+# Velocity Scan #
+Flow(['Scan'],['data', 'Automatic.x'],
+     '''
+     ./Automatic.x
+     v0=0.8 nv=400 dv=0.002
+     w=20
+     ''')
+
+# Velocity Picking #
+Flow('pick','Scan',
+     '''
+     transp plane=23 |
+     pick rect1=50 rect2=100 vel0=1 | 
+     window
+     ''')
+
+# Automatic CMP stack #
+Flow('nmo','data pick',
+      '''
+      transp plane=23 | 
+      nmo velocity=${SOURCES[1]}
+      ''')
+Flow('stack','nmo','stack')
+
+# ZO data #
+Flow('zero','data','window f3=0 n3=1')
+
+######################################################################
+# Linear ZO stack #
+Flow(['Rnip', 'Alpha','coherent1'],['zero', 'pick', 'Linear.x'],
+     '''
+     ./Linear.x
+     vel=${SOURCES[1]}
+     alph=${TARGETS[1]}
+     coh=${TARGETS[2]}
+     na=360
+     w=20
+     ntr=20
+     vns=1
+     ''')
+Flow('AlphaCoherent',['Alpha','coherent1'],'add mode=p ${SOURCES[1]}')
+Flow('RnipCoherent',['Rnip','coherent1'],'add mode=p ${SOURCES[1]}')
+
+# Hyperbolic ZO stack #
+Flow(['Rn','coherent2'],['zero', 'Alpha', 'Hyperbolic.x'],
+     '''
+     ./Hyperbolic.x
+     alph=${SOURCES[1]}
+     coh=${TARGETS[1]}
+     r0=-40
+     dr=0.01
+     nr=8000
+     w=40
+     ntr=40
+     vns=1
+     ''')
+Flow('RnCoherent',['Rn','coherent2'],'add mode=p ${SOURCES[1]}')
+
+# Tf calculation coherent #
+Flow('Tf',['RnipCoherent', 'RnCoherent', 'Tf.x'],
+     '''
+     ./Tf.x
+     rn=${SOURCES[1]}
+     ''')
+Flow('TFfinal','Tf','sfmask min=0.85 max=1 | sfdd type=float')
+Flow('Diffraction',['TFfinal','zero'],'sfadd mode=p ${SOURCES[1]}')
+
+#######################################################################
+
+# travel time pick #
+
+Flow('Travelpick',['data','Alpha','Rnip','Travelpick.x'],
+     '''
+     ./Travelpick.x
+     alph=${SOURCES[1]}
+     rnip=${SOURCES[2]}
+     vns=1
+     ''')
+
+# diffraction extraction #
+Flow('diffractionCMP',['data','Travelpick','TFfinal','Extract3D.x'],
+     '''
+     ./Extract3D.x
+     pick=${SOURCES[1]}
+     Tf=${SOURCES[2]}
+     k=0
+     tfdif=0.85
+     ''')
+Result('diffractionCMP',
+       '''
+       byte |
+       grey3 flat=y frame1=750 frame3=0 frame2=175
+       label1=Time unit1=s 
+       label3=Half-Offset unit3=km 
+       label2=Midpoint unit2=km
+       labelsz=6 labelfat=3 titlesz=12 titlefat=3
+       title="CMP_gathers" point1=0.8 point2=0.8 
+       ''')
+
+#######################################################################
+
+#RTM/GmRTM
+# The location of source is (0.5,0) km, and the receivers are (-0.5,0), (0,0), (1,0), (1.5,0), (2,0).
+
+
+par1={
+     'nt':1700,  'ot':-0.8, 'dt':0.004, 'lt':'t', 'ut':'s',
+     'nx':351,   'ox':-1,   'dx':0.01,  'lx':'x', 'ux':'km',
+     'nz':301,   'oz':0,    'dz':0.01,  'lz':'z', 'uz':'km',
+     'kt':200,   'nb':100,  'jsnap':1,  'jdata':1
+    }
+fdmod.param(par1)
+
+par2={
+     'nt':1500,  'ot':0,    'dt':0.004, 'lt':'t', 'ut':'s',
+     'nx':351,   'ox':-1,   'dx':0.01,  'lx':'x', 'ux':'km',
+     'nz':301,   'oz':0,    'dz':0.01,  'lz':'z', 'uz':'km',
+     'kt':200,   'nb':100,  'jsnap':1,  'jdata':1,'scalebar':'y'
+    }
+fdmod.param(par2)
+
+
+#Source
+Flow('Fsou',None,
+'''
+spike n1=2 nsp=2 k1=1,2 mag=0.5,0 o1=0 o2=0
+''')
+#Receiver
+Flow('Frec',None,
+     '''
+     spike 
+     n1=2 n2=5
+     nsp=10
+     k1=1,2,1,2,1,2,1,2,1,2
+     l1=1,2,1,2,1,2,1,2,1,2
+     k2=1,1,2,2,3,3,4,4,5,5
+     l2=1,1,2,2,3,3,4,4,5,5
+     mag=-0.5,0,0,0,1,0,1.5,0,2,0
+     o1=0 o2=0
+     ''')
+# Velocity
+Flow('Fvel',None,
+     '''
+     math output="1"
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g
+     ''' % par1)
+
+# Density
+Flow('Fden',None,
+     '''
+     math output="1"
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g
+     ''' % par1)
+
+# Wavelet
+fdmod.wavelet('wav_',10,par1)
+Flow('Fwav', 'wav_','transp')
+
+# Forward wavefield
+fdmod.awefd('dat','wfl',
+            'Fwav',
+            'Fvel','Fden',
+            'Fsou','Frec','free=n',par1)
+Flow('Fwfl','wfl','window f3=200 n3=1500')
+Flow('Fdat','dat','window f2=200 n2=1500')
+
+Flow('D_data1','diffractionCMP','window f2=100 n2=1 f3=100 n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('D_data2','diffractionCMP','window f2=125 n2=1 f3=50  n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('D_data3','diffractionCMP','window f2=175 n2=1 f3=50  n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('D_data4','diffractionCMP','window f2=200 n2=1 f3=100 n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('D_data5','diffractionCMP','window f2=225 n2=1 f3=150 n3=1 | transp plane=12 | reverse which=2 opt=i')
+
+Flow('O_data1','data','window f2=100 n2=1 f3=100 n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('O_data2','data','window f2=125 n2=1 f3=50  n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('O_data3','data','window f2=175 n2=1 f3=50  n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('O_data4','data','window f2=200 n2=1 f3=100 n3=1 | transp plane=12 | reverse which=2 opt=i')
+Flow('O_data5','data','window f2=225 n2=1 f3=150 n3=1 | transp plane=12 | reverse which=2 opt=i')
+
+#RTM&GmRTM
+for i in range(1,6,1):
+     # Extract the location of receivers
+     Flow('Loc_rec_%d' %i,'Frec',
+          '''
+          window f2=%d n2=1
+          ''' %(i-1))
+     # Backward the wave from receivers
+     fdmod.awefd('Tempdata%d' %i,'Bwfl_%d' %i,
+                 'D_data%d' %i,
+                 'Fvel','Fden',
+                 'Loc_rec_%d' %i,'Fsou','free=n',par2)
+     fdmod.awefd('Tempdata%d_origin' %i,'Bwfl_%d_origin' %i,
+                 'O_data%d' %i,
+                 'Fvel','Fden',
+                 'Loc_rec_%d' %i,'Fsou','free=n',par2)
+     # reverse the wavefield along the tiem axis
+     Flow('Rwfl_%d' %i,'Bwfl_%d' %i,
+          '''
+          math output="input*1e5" |
+          reverse which=4 opt=i verb=y
+          ''')
+     Flow('Rwfl_%d_rtm' %i,'Bwfl_%d' %i,
+          '''
+          reverse which=4 opt=i verb=y
+          ''')
+     Flow('Rwfl_%d_origin' %i,'Bwfl_%d_origin' %i,
+          '''
+          math output="input*1e5" |
+          reverse which=4 opt=i verb=y
+          ''')
+     Flow('Rwfl_%d_origin_rtm' %i,'Bwfl_%d_origin' %i,
+          '''
+          reverse which=4 opt=i verb=y
+          ''')
+
+# multiply all the backward wavefield
+Flow('Wavefield1',['Rwfl_1', 'Rwfl_2', 'Rwfl_3', 'Rwfl_4', 'Rwfl_5'],
+     ''' 
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+Flow('Wavefield1_rtm',['Rwfl_1_rtm', 'Rwfl_2_rtm', 'Rwfl_3_rtm', 'Rwfl_4_rtm', 'Rwfl_5_rtm'],
+     ''' 
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+Flow('Wavefield1_origin',['Rwfl_1_origin', 'Rwfl_2_origin', 'Rwfl_3_origin', 'Rwfl_4_origin', 'Rwfl_5_origin'],
+     ''' 
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+Flow('Wavefield1_origin_rtm',['Rwfl_1_origin_rtm', 'Rwfl_2_origin_rtm', 'Rwfl_3_origin_rtm', 'Rwfl_4_origin_rtm', 'Rwfl_5_origin_rtm'],
+     ''' 
+     add ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+# multiply the forward wavefield
+Flow('Wavefield2',['Wavefield1', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+Flow('Wavefield2_rtm',['Wavefield1_rtm', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+Flow('Wavefield2_origin',['Wavefield1_origin', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+Flow('Wavefield2_origin_rtm',['Wavefield1_origin_rtm', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+
+
+# stack along the time axis
+Flow('image_CRS_GmRTM','Wavefield2',
+     '''
+     stack axis=3
+     ''')
+Flow('image_CRS_RTM','Wavefield2_rtm',
+     '''
+     stack axis=3
+     ''')
+Flow('image_GmRTM','Wavefield2_origin',
+     '''
+     stack axis=3
+     ''')
+Flow('image_RTM','Wavefield2_origin_rtm',
+     '''
+     stack axis=3
+     ''')
+
+Result('image_CRS_GmRTM',fdmod.cgrey('color=e clip=2e-24 maxval=2e-24 minval=-2e-24 label1=Depth unit1=km label2=Distance unit2=km ',par2))
+
+Result('image_CRS_RTM',fdmod.cgrey('color=e scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par2))
+
+Result('image_GmRTM',fdmod.cgrey('color=e clip=1e-23 maxval=1e-23 minval=-1e-23 scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par2))
+
+Result('image_RTM',fdmod.cgrey('color=e scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par2))
+
+
+
+Result('pick',            fdmod.cgrey('title="Velocity_Pick"        screenratio=0.7 color=j label1=Time unit1=s',par))
+Result('stack',           fdmod.cgrey('title="Stacked_Data"         screenratio=0.7 color=i label1=Time unit1=s',par))
+Result('zero',            fdmod.cgrey('title="ZO_Data"              screenratio=0.7 color=i label1=Time unit1=s',par))
+
+Result('coherent1',       fdmod.cgrey('title="Coherence_Linear"     screenratio=0.7 color=i label1=Time unit1=s',par))
+Result('coherent2',       fdmod.cgrey('title="Coherence_Hyperbolic" screenratio=0.7 color=i label1=Time unit1=s',par))
+
+Result('Alpha',           fdmod.cgrey('title="Alpha"                screenratio=0.7 color=e label1=Time unit1=s',par))
+Result('AlphaCoherent',   fdmod.cgrey('title="Alpha_Coherence"      screenratio=0.7 color=e label1=Time unit1=s',par))
+
+Result('Rnip',            fdmod.cgrey('title="Rnip"                 screenratio=0.7 color=j label1=Time unit1=s',par))
+Result('RnipCoherent',    fdmod.cgrey('title="Rnip_Coherence"       screenratio=0.7 color=j label1=Time unit1=s',par))
+
+Result('Rn',              fdmod.cgrey('title="Rn"                   screenratio=0.7 color=j label1=Time unit1=s',par))
+Result('RnCoherent',      fdmod.cgrey('title="Rn_Coherence"         screenratio=0.7 color=j label1=Time unit1=s',par))
+
+Result('Tf',              fdmod.cgrey('title="Tf"                   screenratio=0.7 color=H label1=Time unit1=s',par))
+Result('TFfinal',         fdmod.cgrey('title="Tf_final"             screenratio=0.7 color=H label1=Time unit1=s',par))
+Result('Diffraction',     fdmod.cgrey('title="Diffraction_Data_Tf"  screenratio=0.7 color=i label1=Time unit1=s',par))
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

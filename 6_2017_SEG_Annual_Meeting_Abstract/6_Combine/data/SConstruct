@@ -1,0 +1,45 @@
+from rsf.proj import*
+
+#Source
+Flow("Fsou",None,
+'''
+spike n1=2 nsp=2 k1=1,2 mag=6.094,0.762 o1=0 o2=0
+''')
+
+#Receiver
+Flow("Frec",None,
+'''
+spike 
+n1=2 n2=5
+nsp=10
+k1=1,2,1,2,1,2,1,2,1,2
+l1=1,2,1,2,1,2,1,2,1,2
+k2=1,1,2,2,3,3,4,4,5,5
+l2=1,1,2,2,3,3,4,4,5,5
+mag=4,0.762,5,0.762,7,0.762,8,0.762,9,0.762
+o1=0 o2=0
+''')
+
+#Wavelet
+Flow("Fwav",None,
+'''
+spike nsp=1 n1=10000 d1=0.001 k1=100 | ricker1 frequency=15 | transp
+''')
+
+# FDTD real
+Flow("Fdata","Fwav",
+'''
+awefd2d vel=Fvelr.rsf sou=Fsou.rsf rec=Frec.rsf wfl=Fwfl.rsf den=Fden.rsf verb=y free=n expl=y snap=y dabc=y nb=100 jdata=1 jsnap=1
+''')
+# FDTD diffraction removed
+Flow("Fdatb","Fwav",
+'''
+awefd2d vel=result.rsf sou=Fsou.rsf rec=Frec.rsf wfl=Fwflr.rsf den=Fden.rsf verb=y free=n expl=y snap=y dabc=y nb=100 jdata=1 jsnap=1
+''')
+# diffraction data
+Flow("Fdat",None,
+'''
+sfmath xx1=Fdata.rsf xx2=Fdatb.rsf output='xx1-xx2'
+''')
+
+End()

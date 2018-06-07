@@ -1,0 +1,18 @@
+from rsf.proj import*
+import fdmod
+
+par={
+   'nt':10000,  'ot':0,      'dt':0.001,     'lt':'t',        'ut':'s',
+   'nx':1599,   'ox':3.048,  'dx':0.00762,   'lx':'Distance', 'ux':'km',
+   'nz':900,    'oz':0.762,  'dz':0.00762,   'lz':'Depth',    'uz':'km' ,
+   'kt':100,    'nb':100,    'jsnap':1,      'jdata':1,
+    }
+fdmod.param(par)
+
+Flow('Fdat_','Fdat','window f2=%(kt)d | pad n2out=%(nt)d | put o2=%(ot)g'%par)
+Result('Fdat_','transp |'+fdmod.dgrey('pclip=99.9',par))
+Flow('Dat_','Dat','window f2=%(kt)d | pad n2out=%(nt)d | put o2=%(ot)g'%par)
+Result('Dat_','transp |'+fdmod.dwigl('pclip=99.9',par))
+
+End()
+

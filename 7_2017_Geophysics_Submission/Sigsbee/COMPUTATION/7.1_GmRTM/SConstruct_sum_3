@@ -1,0 +1,51 @@
+from rsf.proj import *
+import fdmod
+
+# multiply all the backward wavefield
+
+Flow('Wavefield1_origin',['Rwfl_1_origin', 'Rwfl_2_origin', 'Rwfl_3_origin', 'Rwfl_4_origin', 'Rwfl_5_origin'],
+     ''' 
+     add mode=p ${SOURCES[1]} ${SOURCES[2]} ${SOURCES[3]} ${SOURCES[4]}
+
+     ''')
+
+# multiply the forward wavefield
+
+Flow('Wavefield2_origin',['Wavefield1_origin', 'Fwfl'],
+     ''' 
+     add mode=p ${SOURCES[1]}
+
+     ''')
+
+# stack along the time axis
+
+Flow('image_GmRTM','Wavefield2_origin',
+     '''
+     stack axis=3
+     ''')
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

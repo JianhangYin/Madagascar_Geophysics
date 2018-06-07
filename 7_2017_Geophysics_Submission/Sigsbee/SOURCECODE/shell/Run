@@ -1,0 +1,6 @@
+sh_list=`ls *.sh`
+
+for shfile in $sh_list
+do
+	sbatch $shfile
+done

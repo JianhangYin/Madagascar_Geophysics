@@ -1,0 +1,38 @@
+from rsf.proj import*
+import fdmod
+
+par={
+   'nt':10000,   'ot':0,       'dt':0.001,     'lt':'Time',       'ut':'s',
+   'nx':1600,   'ox':3.048,   'dx':0.00762,   'lx':'Distance',   'ux':'km',
+   'nz':800,    'oz':0.762,   'dz':0.00762,   'lz':'Depth',      'uz':'km' ,
+   'kt':100,    'nb':100,     'jsnap':1,      'jdata':1,         'free':'n',
+   'snap':'n',  'scalebar':'y'
+    }
+fdmod.param(par)
+
+# FD 
+for j in range(310,320):
+	
+	jtag = "-j%03d"%j
+	Flow('ss'+jtag,'ss','window n2=1 f2=%d'%j)
+	Plot('ss'+jtag,fdmod.ssplot('plotfat=20 plotcol=2',par))
+
+	# ------------------------------------------------------------
+	# Forward FD modeling 1
+	fdmod.awefd('dat1'+jtag,'wfl1'+jtag,
+	            'wav',
+	            'vel','den',
+	            'ss'+jtag,'rr','free=n',par)
+	# Forward FD modeling 2
+	fdmod.awefd('dat2'+jtag,'wfl2'+jtag,
+	            'wav',
+	            'veld','den',
+	            'ss'+jtag,'rr','free=n',par)
+	Flow('data'+jtag,['dat1'+jtag,'dat2'+jtag],
+	     '''
+	     math xx1=${SOURCES[0]} xx2=${SOURCES[1]} output='xx1-xx2' |
+	     window f1=0 n1=800 | put o1=%(ox)g d1=0.01524
+	     ''' %par)
+	Result('data'+jtag,'transp memsize=2000 |' + fdmod.dgrey('pclip=99.9 screenratio=1.0',par))
+
+End()

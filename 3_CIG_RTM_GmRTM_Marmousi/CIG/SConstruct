@@ -1,0 +1,189 @@
+try:	from rsf.cluster import *
+except:	from rsf.proj    import *
+import fdmod
+
+# ------------------------------------------------------------
+par = {
+    'nt':2001, 'ot':0, 'dt':0.001, 'lt':'t', 'ut':'s',     
+    'nx':401,  'ox':0, 'dx':0.005, 'lx':'x', 'ux':'km',
+    'nz':201,  'oz':0, 'dz':0.005, 'lz':'z', 'uz':'km',
+    'kt':200,'nb':100,'jsnap':1,'jdata':1
+    }
+fdmod.param(par)
+par['wweight']=5    # for wom.vpl
+par['snap']='y'
+par['xk']=50                  # start point for taper
+par['xl']=par['nx']-par['xk'] # end point for taper
+
+# ------------------------------------------------------------
+# source and receiver coordinates
+nreceiver=401
+nsources=100
+dsources=4
+osources=0*par['dx']
+
+fdmod.boxarray('ss',
+               1,par['oz'],par['dz'],
+               nsources,osources,dsources*par['dx'],par)
+Plot('ss',fdmod.ssplot('plotfat=15 plotcol=1',par))
+
+fdmod.horizontal('rr',par['oz'],par) 
+Plot('rr',fdmod.rrplot('',par))
+
+# ------------------------------------------------------------
+# wavelet
+fdmod.wavelet('wav_',35,par)
+Flow(  'wav', 'wav_','transp')
+Result('wav','window n2=500 |' + fdmod.waveplot('',par))
+
+# ------------------------------------------------------------
+# velocity and density
+Flow('vel',None,
+     '''
+     math output="2"
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g
+     ''' % par)
+Plot('vel',fdmod.cgrey('mean=y',par))
+
+Flow('den',None,
+     '''
+     spike nsp=2 mag=+1
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g k1=81 l1=%(nz)d
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g k2=1  l2=%(nx)d |
+     add add=2
+     ''' % par)
+Plot('den',fdmod.cgrey('mean=y',par))
+Result('den',['den','rr','ss'],'Overlay')
+
+# # ------------------------------------------------------------
+# # edge taper
+Flow('taper',None,
+     '''
+     spike nsp=1 mag=1
+     n1=%(nx)d d1=%(dx)g o1=%(ox)g k1=%(xk)d l1=%(xl)d
+     n2=%(nt)d d2=%(dt)g o2=%(ot)g |
+     smooth rect1=50 |
+     window j2=%(jdata)d
+     ''' % par)
+Result('taper','transp |'+fdmod.dgrey('pclip=99',par))
+
+# ------------------------------------------------------------------------------
+# Loop
+for j in range(0,nsources,50):
+  jtag = "-j%03d"%j
+
+  Flow('ss'+jtag,'ss','window n2=1 f2=%d'%j)
+  Plot('ss'+jtag,fdmod.ssplot('plotfat=20 plotcol=2',par))
+
+# ------------------------------------------------------------
+# Forward FD modeling
+  fdmod.awefd('dat'+jtag,'wfl'+jtag,
+              'wav',
+              'vel','den',
+              'ss'+jtag,'rr','free=n',par)
+  Flow(['dat'+jtag,'wfl'+jtag],['wav','vel','den','ss'+jtag,'rr'],
+       '''
+       awefd2d vel=${SOURCES[1]} den=${SOURCES[2]} wfl=${TARGETS[1]} sou=${SOURCES[3]} rec=${SOURCES[4]} snap=y verb=y jsnap=1 jdata=1 free=n nb=100
+       ''')
+  fdmod.wom('wom'+jtag,'wfl'+jtag,'den',2.5,par)
+  Result('wom'+jtag,'window j3=20 |' + fdmod.cgrey('pclip=99.9',par))
+
+  Flow('dat1'+jtag,'dat'+jtag,'window f1=0 n1=%(nx)d | put o1=%(ox)g'%par)
+  Result('dat1'+jtag,'transp memsize=2000 |' + fdmod.dgrey('pclip=99.9 screenratio=1.0',par))
+
+  Flow('datt'+jtag,['dat'+jtag,'taper'],'window | add mode=p ${SOURCES[1]}')
+  Result('datt'+jtag,'transp memsize=2000 |' + fdmod.dgrey('pclip=99.9 screenratio=1.0',par))
+
+  # reverse the data
+  Flow('Rdat'+jtag,'dat'+jtag,
+  '''
+  reverse which=2 opt=i verb=y
+  ''')
+
+#Backward FD modeling
+  fdmod.awefd('tmp'+jtag,'bwfl'+jtag,
+              'Rdat'+jtag,
+              'vel','den',
+              'rr','ss'+jtag,'free=n jdata=1',par) 
+  Flow(['tmp'+jtag,'bwfl'+jtag],['Rdat'+jtag,'vel','den','rr','ss'+jtag],
+       '''
+       awefd2d vel=${SOURCES[1]} den=${SOURCES[2]} wfl=${TARGETS[1]} sou=${SOURCES[3]} rec=${SOURCES[4]} snap=y verb=y jsnap=1 jdata=1 free=n nb=100
+       ''')
+
+  # reverse receiver wavefield
+  Flow('Rwfl'+jtag,'bwfl'+jtag,
+  '''
+  reverse which=4 opt=i verb=y
+  ''')
+  fdmod.wom('Rwom'+jtag,'Rwfl'+jtag,'den',2.5,par)
+  Result('Rwom'+jtag,'window j3=20 |' + fdmod.cgrey('pclip=99.9',par))
+
+  # Multiply the forward wavefield
+  str_1='wfl'+jtag
+  Flow('imagetmp'+jtag,'Rwfl'+jtag,
+  '''
+  add mode=p %s.rsf
+  '''%str_1)
+  # imaging condition
+  Flow('image'+jtag,'imagetmp'+jtag,
+  '''
+  stack axis=3
+  ''')
+
+# ------------------------------------------------------------
+# Stack over all sources 
+F0low('cig-j000','dat1-j000','cp')
+Flow('imagesum-j000','image-j000','cp')
+for j in range(1,nsources,1):
+  jtag = "-j%03d"%j
+  jtag2= "-j%03d"%(j-1)
+  Flow('cig'+jtag,['dat1'+jtag,'cig'+jtag2],'window n3=1 | cat axis=3 ${SOURCES[1]}')
+  Flow('imagesum'+jtag,['image'+jtag,'imagesum'+jtag2],'add ${SOURCES[1]}')
+Flow('cigresult','cig-j099','reverse which=4')
+for j in range(0,nreceiver,80):
+  ktag = "-k%03d"%j
+  Flow('cigtmp'+ktag,'cigresult','window f1=%d'%j)
+  Flow('cigimage'+ktag,'cigtmp'+ktag,'transp plane=13')
+  Result('cigimage'+ktag,fdmod.cgrey('gainpanel=a pclip=99 color=i',par))
+Result('imagesum-j099',fdmod.cgrey('gainpanel=a pclip=99 color=i',par))
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

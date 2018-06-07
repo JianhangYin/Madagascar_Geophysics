@@ -1,0 +1,18 @@
+from rsf.proj import *
+import fdmod
+
+par={
+     'nt':400,   'ot':0,           'dt':0.001,  'lt':'t',     'ut':'s',
+     'nx':60,    'ox':-0.03,       'dx':0.008,   'lx':'East',  'ux':'km',
+     'ny':50,    'oy':-0.06,       'dy':0.008,   'ly':'North', 'uy':'km',
+     'nz':50,    'oz':2.5,         'dz':0.008,   'lz':'Depth', 'uz':'km',
+     'kt':0,     'nb':200,         'jsnap':1,    'jdata':1
+    }
+fdmod.param(par)
+
+Flow('wavefield4x','wavefield4',
+     '''
+     sfmath xx4=wavefield4.rsf output='xx4*1e7'
+     ''')
+
+End()

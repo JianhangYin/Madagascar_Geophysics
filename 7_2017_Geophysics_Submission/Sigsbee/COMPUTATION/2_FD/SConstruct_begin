@@ -1,0 +1,120 @@
+from rsf.proj import*
+import fdmod
+
+par={
+   'nt':10000,   'ot':0,       'dt':0.001,     'lt':'Time',       'ut':'s',
+   'nx':1600,   'ox':3.048,   'dx':0.00762,   'lx':'Distance',   'ux':'km',
+   'nz':800,    'oz':0.762,   'dz':0.00762,   'lz':'Depth',      'uz':'km' ,
+   'kt':100,    'nb':100,     'jsnap':1,      'jdata':1,         'free':'n',
+   'snap':'n',  'scalebar':'y'
+    }
+fdmod.param(par)
+
+###########################################################################################
+########################### source and receiver coordinates ###############################
+################## source:   3.048km  --  800*0.01524km  --  15.24km ######################
+################## receiver: 3.048km  --  800*0.01524km  --  15.24km ######################
+###########################################################################################
+
+nsources=800
+dsources=2
+osources=par['ox']
+
+fdmod.boxarray('ss',
+               1,par['oz'],par['dz'],
+               nsources,osources,dsources*par['dx'],par)
+Plot('ss',fdmod.ssplot('plotfat=15 plotcol=1',par))
+
+fdmod.boxarray('rr',
+               1,par['oz'],par['dz'],
+               nsources,osources,dsources*par['dx'],par)
+Plot('rr',fdmod.rrplot('',par))
+
+###########################################################################################
+########################################## Model ##########################################
+###########################################################################################
+
+# constant velocity model #
+Flow("veld",None,
+     '''
+     spike mag=1.5006 nsp=1 
+     d1=0.00762 d2=0.00762  
+     n1=800 n2=1600 
+     o1=0.762 o2=3.048 
+     label1=Depth label2=Distance
+     unit1=km unit2=km
+     ''')
+
+# density #
+Flow("den",None,
+     '''
+     spike mag=1 nsp=1 
+     d1=0.00762 d2=0.00762  
+     n1=800 n2=1600 
+     o1=0.762 o2=3.048 
+     label1=Depth label2=Distance
+     unit1=km unit2=km
+     ''')
+Plot('den',fdmod.cgrey('mean=y',par))
+Plot('vel',fdmod.cgrey('mean=y',par))
+Result('velR',['vel','rr'],'Overlay')
+Result('velS',['vel','ss'],'Overlay')
+
+# wavelet #
+fdmod.wavelet('wav_',15,par)
+Flow('wav','wav_','transp')
+Result('wav','window n2=500 |' + fdmod.waveplot('',par))
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

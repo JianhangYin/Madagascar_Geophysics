@@ -1,0 +1,31 @@
+from rsf.proj import*
+
+###########################################################################################
+######################################## shot gather ######################################
+###########################################################################################
+
+Flow('data-raw',
+     ['datasum-j099',
+      'datasum-j199',
+      'datasum-j299',
+      'datasum-j399',
+      'datasum-j499',
+      'datasum-j599',
+      'datasum-j699',
+      'datasum-j799'],
+      '''
+      cat axis=3 ${SOURCES[1]} |
+      cat axis=3 ${SOURCES[2]} |
+      cat axis=3 ${SOURCES[3]} |
+      cat axis=3 ${SOURCES[4]} |
+      cat axis=3 ${SOURCES[5]} |
+      cat axis=3 ${SOURCES[6]} |
+      cat axis=3 ${SOURCES[7]} 
+      ''')
+
+Flow('data-shot','data-raw',
+     '''
+     transp plane=12
+     ''')
+
+End()

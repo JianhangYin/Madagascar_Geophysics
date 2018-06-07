@@ -1,0 +1,93 @@
+try:    from rsf.cluster import *
+except: from rsf.proj    import *
+import fdmod
+
+# --------------------------------------------------------
+# m??: for marmousi model
+par = {
+    'nt':15000, 'ot':0, 'dt':0.00015, 'lt':'t', 'ut':'s',     
+    'nx':2403, 'ox':0.00, 'dx':0.001249, 'lx':'x', 'ux':'km',
+    'nz':1001, 'oz':0.00, 'dz':0.001249, 'lz':'z', 'uz':'km',
+    'mdx': 0.001249, 'mox':4.50, 'moz':0.35, 'mjx':2, 'mjz':2,
+    'nb':100,'jsnap':1,'jdata':1, 'kt':500
+    }
+
+par['xsou'] = par['ox'] + par['nx']/2 * par['dx']
+par['zsou'] = par['oz'] 
+par['wweight']=5
+par['snap']='y'
+par['mz']=0.4
+fdmod.param(par)
+
+par['ompnth']=4
+
+# ------------------------------------------------------------
+# velocity model
+for file in ('vp','ro','vs'):
+  if(file=='vp'):
+    ifile='/work/model/marm2/vp_marmousi-ii.segy'
+  elif(file=='vs'):
+    ifile='/work/model/marm2/vs_marmousi-ii.segy'
+  else:
+    ifile='/work/model/marm2/density_marmousi-ii.segy'
+
+  Flow(['zg'+file,'tg'+file,'./sg'+file,'./bg'+file],ifile,
+       '''
+       segyread tape=$SOURCE
+       tfile=${TARGETS[1]}
+       hfile=${TARGETS[2]}
+             bfile=${TARGETS[3]}
+             ''',stdin=0)
+
+  Flow(file,'zg'+file,
+             '''
+             put
+             o1=0 d1=%(mdx)g
+             o2=0 d2=%(mdx)g |
+             window  min1=%(moz)g  j1=%(mjz)d n1=%(nz)d
+                     min2=%(mox)g  j2=%(mjx)d n2=%(nx)d |
+             put
+             o1=0 d1=%(dz)g label1=z unit1=km
+             o2=0 d2=%(dx)g label2=x unit2=km
+             ''' % par)
+
+Plot('vp',fdmod.cgrey('mean=y color=j',par))
+Plot('ro',fdmod.cgrey('mean=y color=j',par))
+# -------------------------------------------------------------
+# Active Source
+fdmod.point('ss',par['xsou'],par['zsou'],par)
+Plot('ss',fdmod.ssplot('',par))
+
+fdmod.horizontal('rr',par['oz'],par)
+Plot('rr',fdmod.rrplot('',par))
+# -------------------------------------------------------------
+# Wavelet
+fdmod.wavelet('wav_',50,par)
+Flow( 'wav', 'wav_','transp')
+Result('wav','window n2=1000 |' + fdmod.waveplot('',par))
+# ------------------------------------------------------------
+# Forward wave
+fdmod.awefd('dat','wfl',
+            'wav',
+            'vp','ro',
+            'ss','rr','free=n',par)
+Flow('dat1','dat','window f1=0 n1=%(nx)d | put o1=%(ox)g'%par)
+Result('dat1','transp memsize=2000 |' + fdmod.dgrey('pclip=99.9 screenratio=1.0',par))
+# ------------------------------------------------------------
+# reverse the data
+Flow('dat_','dat','reverse which=2 opt=i verb=y')
+# ------------------------------------------------------------
+# FD backward
+fdmod.awefd('tmp','wflb',
+            'dat_',
+            'vp','ro',
+            'rr','ss','free=n',par)
+# -----------------------------------------------------------
+Flow('wflr','wflb','reverse which=4 opt=i verb=y')
+Flow('wflsum',['wfl','wflr'],'add mode=p ${SOURCES[1]}')
+Flow('image','wflsum','stack axis=3')
+
+Result('image',fdmod.cgrey('pclip=99.9',par))
+
+End()
+

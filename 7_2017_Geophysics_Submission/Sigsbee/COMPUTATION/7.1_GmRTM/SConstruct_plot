@@ -1,0 +1,56 @@
+from rsf.proj import *
+import fdmod
+
+###########################################################################################
+####################################### RTM/GmRTM #########################################
+#################################### source: (7,0) km ##################################### 
+################### receiver: (4,0), (5,0), (6,0), (8,0), (9,0), km #######################
+###########################################################################################
+
+par={
+     'nt':10000,  'ot':0,         'dt':0.001,    'lt':'t', 'ut':'s',
+     'nx':564,    'ox':3.055,      'dx':0.01143,  'lx':'x', 'ux':'km',
+     'nz':800,    'oz':0.762,     'dz':0.00762,  'lz':'z', 'uz':'km',
+     'kt':100,    'nb':100,  'jsnap':1,  'jdata':1
+    }
+fdmod.param(par)
+
+###########################################################################################
+####################################### Plotting ########################################## 
+###########################################################################################
+
+Result('image_CRS_GmRTM',fdmod.cgrey('color=e scalebar=y label1=Depth unit1=km label2=Distance unit2=km ',par))
+
+Result('image_CRS_RTM',fdmod.cgrey('color=e scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+
+Result('image_GmRTM',fdmod.cgrey('color=e  scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+
+Result('image_RTM',fdmod.cgrey('color=e scalebar=y label1=Depth unit1=km label2=Distance unit2=km',par))
+
+Result('Fwfl','sfwindow j3=30 | sfgrey gainpanel=a')
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

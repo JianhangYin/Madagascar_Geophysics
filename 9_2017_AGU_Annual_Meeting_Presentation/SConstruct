@@ -1,0 +1,206 @@
+from rsf.proj import *
+import fdmod
+
+par={
+     'nt':400,   'ot':0,           'dt':0.001,  'lt':'t',     'ut':'s',
+     'nx':60,    'ox':-0.03,       'dx':0.008,   'lx':'East',  'ux':'km',
+     'ny':50,    'oy':-0.06,       'dy':0.008,   'ly':'North', 'uy':'km',
+     'nz':50,    'oz':2.5,         'dz':0.008,   'lz':'Depth', 'uz':'km',
+     'kt':0,     'nb':200,         'jsnap':1,    'jdata':1
+    }
+fdmod.param(par)
+
+# Velocity Model #
+Flow('Fvel',None,
+     '''
+     spike 
+     mag=2.934489432,2.924918712,3.051243072,3.2275272,2.572512
+     nsp=5
+     n1=50 n2=60 n3=50
+     o1=2.5 o2=-0.03 o3=-0.06
+     d1=0.008 d2=0.008 d3=0.008
+     k1=1,4,12,29,44
+     l1=3,11,28,43,50
+     k2=1,1,1,1,1,1
+     l2=60,60,60,60,60,60
+     k3=1,1,1,1,1,1
+     l3=50,50,50,50,50,50
+     ''')
+
+# Density Model #
+Flow('Fden',None,
+     '''
+     spike 
+     mag=1
+     nsp=1
+     n1=50 n2=60 n3=50
+     o1=2.5 o2=-0.03 o3=-0.06
+     d1=0.008 d2=0.008 d3=0.008
+     ''')
+
+# Station 1 #
+Flow('Fsta1',None,
+     '''
+     spike 
+     n1=3 n2=1
+     nsp=3
+     o1=0 o2=0
+     k1=1,2,3
+     l1=1,2,3
+     k2=1,1,1
+     l2=1,1,1
+     mag=0.33616392,0.018288,2.5513284
+     ''')
+
+# Station 2 #
+Flow('Fsta2',None,
+     '''
+     spike 
+     n1=3 n2=1
+     nsp=3
+     o1=0 o2=0
+     k1=1,2,3
+     l1=1,2,3
+     k2=1,1,1
+     l2=1,1,1
+     mag=0.22533864,0.30635448,2.52581664
+     ''')
+
+# Station 3 #
+Flow('Fsta3',None,
+     '''
+     spike 
+     n1=3 n2=1
+     nsp=3
+     o1=0 o2=0
+     k1=1,2,3
+     l1=1,2,3
+     k2=1,1,1
+     l2=1,1,1
+     mag=0.2229612,0.30644592,2.67879576
+     ''')
+
+# Station 4 #
+Flow('Fsta4',None,
+     '''
+     spike 
+     n1=3 n2=1
+     nsp=3
+     o1=0 o2=0
+     k1=1,2,3
+     l1=1,2,3
+     k2=1,1,1
+     ls2=1,1,1
+     mag=0.22210776,0.30668976,2.80071576
+     ''')
+
+# Source #
+Flow('Ffake',None,
+     '''
+     spike 
+     n1=3 
+     nsp=3 
+     k1=1,2,3
+     mag=0,0,2.5
+     o1=0
+     ''')
+
+# data1 #
+Flow('wavelet1','T_1-34-T',
+     '''
+     window f1=42769670 n1=60 |
+     reverse which=1 |
+     pad end1=340 |
+     sfmask min=-5889.28 max=-5889.27 |
+     sfdd type=folat |
+     sfput o1=0 d1=0.001 |
+     sfricker1 frequency=50 |
+     transp plane=12
+     ''')
+
+# data2 #
+Flow('wavelet2','T_2-20-T',
+     '''
+     window f1=42769670 n1=60 |
+     reverse which=1 |
+     pad end1=340 |
+     sfmask min=-2598.19 max=-2598.17 |
+     sfdd type=folat |
+     sfput o1=0 d1=0.001 |
+     sfricker1 frequency=50 |
+     transp plane=12
+     ''')
+
+# data3 #
+Flow('wavelet3','T_2-30-T',
+     '''
+     window f1=42769670 n1=60 |
+     reverse which=1 |
+     pad end1=340 |
+     sfmask min=-5089.62 max=-5089.58 |
+     sfdd type=folat |
+     sfput o1=0 d1=0.001 |
+     sfricker1 frequency=50 |
+     transp plane=12
+     ''')
+
+# data4 #
+Flow('wavelet4','T_2-38-T',
+     '''
+     window f1=42769670 n1=60 |
+     reverse which=1 |
+     pad end1=340 |
+     sfmask min=-3110.36 max=-3110.32 |
+     sfdd type=folat |
+     sfput o1=0 d1=0.001 |
+     sfricker1 frequency=50 |
+     transp plane=12
+     ''')
+
+Plot('wavelet1',
+     '''
+     transp plane=12 |
+     reverse which=1 |
+     sfgraph
+     ''')
+Plot('wavelet2',
+     '''
+     transp plane=12 |
+     reverse which=1 |
+     sfgraph
+     ''')
+Plot('wavelet3',
+     '''
+     transp plane=12 |
+     reverse which=1 |
+     sfgraph
+     ''')
+Plot('wavelet4',
+     '''
+     transp plane=12 |
+     reverse which=1 |
+     sfgraph
+     ''')
+Result('result','wavelet1 wavelet2 wavelet3 wavelet4','OverUnderAniso')
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

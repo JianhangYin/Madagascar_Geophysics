@@ -1,0 +1,37 @@
+
+SOURCE
+		location	f3	
+
+Fsou_1		4.98348 	128 
+Fsou_2		5.98932 	194
+Fsou_3		6.99516 	260
+Fsou_4		8.001  		326
+Fsou_5		9.00684		392
+
+RECEIVER (GmRTM)
+		location	f2	n2	d2
+Frec_1_(1~6)	4.17576 	75	42	0.01524*6
+Frec_2_(1~6)	4.00812 	64	54	0.01524*6
+Frec_3_(1~6)	4.98348 	128	44	0.01524*6
+Frec_4_(1~6)	5.98932 	194	33	0.01524*6
+Frec_5_(1~6)	6.99516 	260	22	0.01524*6
+
+RECEIVER (RTM)
+
+Frec_1_r	4.17576 	75	252	0.01524
+Frec_2_r	4.00812 	64	329	0.01524
+Frec_3_r	4.98348 	128	265	0.01524
+Frec_4_r	5.98932 	194	199	0.01524
+Frec_5_r	6.99516 	260	133	0.01524	
+
+Diffraction DATA (GmRTM)	
+D_data_(1~5)_(1~6)	
+
+Origin DATA (GmRTM)
+O_data_(1~5)_(1~6)
+
+Diffraction DATA (RTM)
+D_data_(1~5)_r
+
+Origin DATA (RTM)
+O_data_(1~5)_r

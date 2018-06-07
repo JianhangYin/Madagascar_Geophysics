@@ -1,0 +1,67 @@
+from rsf.proj import*
+
+#Velocity
+Flow("Fvel",None,"spike mag=1500,2000,500 nsp=3 k1=1,101,49 l1=100,200,51 k2=1,1,49 l2=200,200,51 k3=1,1,49 l3=200,200,51 d1=4 d2=4 d3=4 label1=z label2=x label3=y n1=200 n2=200 n3=200 o1=2 o2=2 o3=2 unit1=m unit2=m unit3=m")
+
+#Density
+Flow("Fden",None,"spike mag=1000,1500,500 nsp=3 k1=1,101,49 l1=100,200,51 k2=1,1,49 l2=200,200,51 k3=1,1,49 l3=200,200,51 d1=4 d2=4 d3=4 label1=z label2=x label3=y n1=200 n2=200 n3=200 o1=2 o2=2 o3=2 unit1=m unit2=m unit3=m")
+
+#Source
+Flow("Fsou",None,"spike n1=2 nsp=2 k1=1,2 mag=400,0 o1=0 o2=0")
+
+#Receiver
+Flow("Frec",None,
+'''
+spike 
+n1=2 n2=10
+nsp=20
+k1=1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2
+l1=1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2
+k2=1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10
+l2=1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10
+mag=0,0,80,0,160,0,240,0,320,0,480,0,560,0,640,0,720,0,800,0
+o1=0 o2=0
+''')
+
+#Wavelet
+Flow("Fwav",None,"spike nsp=1 n1=2000 d1=0.0005 k1=200 | ricker1 frequency=20 | transp")
+
+
+
+End()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

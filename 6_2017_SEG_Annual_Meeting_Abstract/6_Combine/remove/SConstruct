@@ -1,0 +1,24 @@
+from rsf.proj import*
+
+Flow('addition',None,
+'''
+spike mag=2.24023,2.18382,2.22173,2.33882,2.2868,2.39875,2.46241 nsp=7 k1=577,577,577,577,577,577,577 l1=585,585,585,585,585,585,585 k2=197,397,597,797,997,1197,1397 l2=205,405,605,805,1005,1205,1405 label1=Depth label2=Distance n1=900 n2=1599 d1=0.00762 d2=0.00762 o1=0.762 o2=3.048 unit1=km unit2=km
+''')
+
+Flow('remove','Fvelr',
+'''
+cut f1=576 n1=9 f2=196 n2=9 |
+cut f1=576 n1=9 f2=396 n2=9 |
+cut f1=576 n1=9 f2=596 n2=9 |
+cut f1=576 n1=9 f2=796 n2=9 |
+cut f1=576 n1=9 f2=996 n2=9 |
+cut f1=576 n1=9 f2=1196 n2=9 |
+cut f1=576 n1=9 f2=1396 n2=9
+''')
+
+Flow('result','remove',
+'''
+add addition.rsf
+''')
+
+End()

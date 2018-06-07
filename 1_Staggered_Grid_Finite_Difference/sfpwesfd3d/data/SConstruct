@@ -1,0 +1,9 @@
+from rsf.proj import*
+
+#Velocity
+Flow("Fvel",None,"spike mag=1500 nsp=1 k1=1 l1=200 k2=1 l2=200 k3=1 l3=200 d1=4 d2=4 d3=4 label1=z label2=x label3=y n1=200 n2=200 n3=200 o1=2 o2=2 o3=2 unit1=m unit2=m unit3=m")
+
+#Density
+Flow("Fden",None,"spike mag=1000 nsp=1 k1=1 l1=200 k2=1 l2=200 k3=1 l3=200 d1=4 d2=4 d3=4 label1=z label2=x label3=y n1=200 n2=200 n3=200 o1=2 o2=2 o3=2 unit1=m unit2=m unit3=m")
+
+End()

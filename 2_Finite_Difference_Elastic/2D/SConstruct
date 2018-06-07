@@ -1,0 +1,151 @@
+## 
+ # elastic modeling (isotropic, different sources)
+ ##
+
+from rsf.proj import *
+#import sys
+#sys.path.append('..')
+import fdmod,stiffness
+
+# ------------------------------------------------------------
+par = {
+    'nt':2000,'ot':0, 'dt':0.001, 'lt':'t', 'ut':'s',
+    'nx':601, 'ox':0, 'dx':0.01,  'lx':'x', 'ux':'km',
+    'nz':401, 'oz':0, 'dz':0.01,  'lz':'z', 'uz':'km',
+    'kt':150,
+    'jsnap':1,
+    'nb':100,
+    'frq':5
+    }
+fdmod.param(par)
+
+# v_max * dt / dx < 0.707
+# v_min / f /dx > 20
+
+
+#    'height':10,
+#par['labelattr']=par['labelattr'] + ' n2tic=20 '
+#par['labelattr']=' wantaxis=n '
+# ------------------------------------------------------------
+#par['kz']=2./3.*par['nz']
+
+# ------------------------------------------------------------
+fdmod.wavelet('wav_',par['frq'],par)
+# ------------------------------------------------------------
+# acoustic source
+Flow(  'wava','wav_','transp')
+Result('wava','transp |' + fdmod.waveplot('',par))
+
+# ------------------------------------------------------------
+# elastic source
+Flow('one','wav_','math output=input*1')
+Flow('zer','wav_','math output=input*0')
+
+Flow('wave',['one','one'],
+     '''
+     cat axis=2 space=n ${SOURCES[1:2]} |
+     transp plane=12 |
+     transp plane=23 |
+     transp plane=12
+     ''')
+Flow('hore',['zer','one'],
+     '''
+     cat axis=2 space=n ${SOURCES[1:2]} |
+     transp plane=12 |
+     transp plane=23 |
+     transp plane=12
+     ''')
+Flow('vere',['one','zer'],
+     '''
+     cat axis=2 space=n ${SOURCES[1:2]} |
+     transp plane=12 |
+     transp plane=23 |
+     transp plane=12
+     ''')
+
+fdmod.ewavelet('wave','',par)
+fdmod.ewavelet('hore','',par)
+fdmod.ewavelet('vere','',par)
+
+# ------------------------------------------------------------
+# source/receiver coordinates
+fdmod.point('ss',
+            par['ox']+(par['nx']/2*par['dx']),
+            par['oz'],par)
+            #par['oz']+(par['nz']/2*par['dz']),par)
+fdmod.horizontal('rr',0,par)
+
+Plot('rr',fdmod.rrplot('',par))
+Plot('ss',fdmod.ssplot('',par))
+
+# ------------------------------------------------------------
+Flow('zero',None,
+     '''
+     spike nsp=1 mag=0.0
+     n1=%(nz)d o1=%(oz)g d1=%(dz)g 
+     n2=%(nx)d o2=%(ox)g d2=%(dx)g |
+     put label1=%(lz)s label2=%(lx)s unit1=%(uz)s unit2=%(ux)s
+     ''' % par)
+
+Flow('vp','zero','math output="2.0"')
+Flow('vs','zero','math output="1.0"')
+Flow('ro','zero','math output="2.0"')
+
+Plot('vp',     fdmod.cgrey('allpos=y bias=2.0',par))
+Plot('vs',     fdmod.cgrey('allpos=y bias=0.0',par))
+Plot('ro',     fdmod.cgrey('allpos=y bias=2.0',par))
+
+Result('vp',     'vp      ss','Overlay')
+Result('vs',     'vs      ss','Overlay')
+Result('ro',     'ro      ss','Overlay')
+
+stiffness.iso2d('cc','vp','vs','ro',par)
+stiffness.cplot2d('cc',1,1,par)
+
+# ------------------------------------------------------------
+# acoustic modeling
+#fdmod.awefd2d('da','wa','wava','vp','ro','ss','rr','',par)
+#Result('wa',fdmod.wgrey('pclip=99.9',par))
+#for i in range(0,int(par['nt']/par['jsnap']),1):
+#    fdmod.wframe('wa'+'-'+str(i),'wa',i,'pclip=99.9',par)
+    
+# ------------------------------------------------------------
+# elastic modeling
+# same model: isotropic
+# different types of source: stress, displacement
+fdmod.ewefd2d('datu','wflutmp','wave','cc','ro','ss','rr','ssou=y opot=n',par)
+#fdmod.ewefd2d('deBu','weBu','vere','cc','ro','ss','rr','ssou=n opot=n',par)
+#fdmod.ewefd2d('deCu','weCu','hore','cc','ro','ss','rr','ssou=n opot=n',par)
+
+#fdmod.ewefd2d('deAp','weAp','wave','cc','ro','ss','rr','ssou=y opot=y',par)
+#fdmod.ewefd2d('deBp','weBp','vere','cc','ro','ss','rr','ssou=n opot=y',par)
+#fdmod.ewefd2d('deCp','weCp','hore','cc','ro','ss','rr','ssou=n opot=y',par)
+
+Flow('wflu','wflutmp',
+     '''
+     window
+     f1=%(nb)d n1=%(nz)d
+     f2=%(nb)d n2=%(nx)d
+     ''' % par)
+
+Plot('particle','wflu',
+     '''
+     window n1=1 n2=1 f1=390 f2=330 n4=30 f4=1000 |
+     scale rscale=0 dscale=1 axis=12 |
+     dd type=complex |
+     window |
+     graph symbol=. plotfat=7
+       min1=-1 max1=1 label1="x" unit1=""
+       min2=-1 max2=1 label2="z" unit2=""
+       screenratio=1
+     ''') # + fdmod.cgraph('plotcol=6 symbol=. plotfat=10 wantaxis=y',par))
+
+#Flow('wflusnap','wflu','window j4=100')
+#par['nb']=0
+#for k in ['Au']: #,'Ap','Bu','Bp','Cu','Cp'):
+#    fdmod.emovie('we'+k,'we'+k,20,'pclip=99.9',2,par,0.7,0.7,-9)
+#fdmod.emovie('wflusnap','weAusnap',20,'pclip=99.9',2,par,0.7,0.7,-9)
+
+
+
+End()
