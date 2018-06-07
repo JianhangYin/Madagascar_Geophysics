@@ -14,5 +14,5 @@ My google scholar website: https://scholar.google.com/citations?user=rocjASkAAAA
 8. Codes of resorting and merging hydraulic data. (MATLAB)
 9. Codes of 2017 AGU Annual Meeting Oral Talk. (C, Python)
 
-(Madagascar is a open-source package for seismic processing, you can check more details on their website: http://www.ahay.org/wiki/Main_Page
+(Madagascar is a open-source package for seismic processing, you can check more details on their website: http://www.ahay.org/wiki/Main_Page)
 
