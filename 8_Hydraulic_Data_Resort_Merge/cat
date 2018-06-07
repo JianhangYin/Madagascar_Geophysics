@@ -1,0 +1,13 @@
+echo 'sfcat axis=2 H1* >H1.rsf' 
+sfcat axis=2 H1* >H1.rsf
+echo 'sfcat axis=2 H2* >H2.rsf'
+sfcat axis=2 H2* >H2.rsf
+echo 'sfcat axis=2 R* >R.rsf'
+sfcat axis=2 R* >R.rsf
+echo 'sfcat axis=2 R3* >R3.rsf'
+sfcat axis=2 R3* >R3.rsf
+echo 'sfcat axis=2 T* >T.rsf'
+sfcat axis=2 T* >T.rsf
+echo 'sfcat axis=2 V* >V.rsf'
+sfcat axis=2 V* >V.rsf
+

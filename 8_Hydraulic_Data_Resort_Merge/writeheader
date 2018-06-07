@@ -1,0 +1,30 @@
+#!/bin/bash
+
+
+daydir=/scratch/yinjianhang/CottonValley/Binary/
+for iday in `ls $daydir`
+do
+	bindir=/scratch/yinjianhang/CottonValley/Binary/$iday/
+	headerdir=/home/yinjianhang/CottonValley/header/$iday/
+	mkdir $headerdir
+	for ibin in `ls $bindir`
+	do
+		target=$headerdir${ibin%*@}
+		echo o1=0 >> $target
+		echo d1=0.001 >> $target 
+		echo n1=86400000 >> $target 
+		echo label1=\"Time\" >> $target 
+		echo unit1=\"s\" >> $target 
+		echo data_format=\"native_float\" >> $target 
+		echo esize=4 >> $target 
+		echo in=\"$bindir$ibin\" >> $target 
+		echo $iday\_$ibin yattaze!
+	done
+done
+  
+	
+
+
+
+
+

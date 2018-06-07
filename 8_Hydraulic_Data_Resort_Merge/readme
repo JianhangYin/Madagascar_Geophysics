@@ -1,0 +1,15 @@
+Clear.bat : clear all empty folders
+
+rsac.m    : convert sac file to matlab file
+
+merge.m   : merge all the events into one time sequence for one station
+            
+            for detection days
+                for different components
+            	    for different stations
+                        for different events
+                        merge
+                        end
+                    end
+                 end
+            end      
