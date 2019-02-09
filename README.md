@@ -1,6 +1,6 @@
 # Geophysics Source Code on Madagascar
 
-In this repository, you can find all the source codes (C, Python) when I worked as a geophysicist.
+In this repository, you can find all the source codes (C++, C, Python) when I worked as a geophysicist.
 
 My google scholar website: https://scholar.google.com/citations?user=rocjASkAAAAJ&hl=en
 
