@@ -1,0 +1,24 @@
+Absolute path of seismic data by pca processing :
+(absolute path of seismic data)
+Absolute path of attribute seismic data processing by pca :
+(absolute path of attribute seismic data)
+Line Range of seismic data :
+1
+1
+Trace Range of seismic data :
+1
+250
+Size of slipping window (half win):
+1
+calculating lags shift in INLINE,CROSSLINE,TIME directions :
+1
+1
+1
+step distance in calculating directions :
+1
+Number of samples per trace :
+1000
+Size of half assignment win :
+1
+No. of the final PCA seismic data:
+5
