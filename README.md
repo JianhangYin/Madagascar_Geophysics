@@ -4,7 +4,7 @@ In this repository, you can find all the source codes (C, Python) when I worked 
 
 My google scholar website: https://scholar.google.com/citations?user=rocjASkAAAAJ&hl=en
 
-0. Codes of post-stack seismic data diffraction extraction using principal compoenent analysis(PCA) and Kernel-PCA. (C++)
+0. Codes of post-stack diffraction extraction using principal component analysis(PCA) and Kernel-PCA. (C++)
 1. Codes of 2d/3d acoustic/P-wave seismic modeling using staggered-grid finite difference method. (C, Python)
 2. Test for Madagascar 2D/3D elastic seismic modeling using finite difference method. (C, Python)
 3. Codes of applying CIG, GmRTM, conventional RTM on the Marmousi synthetic data. (C, Python)
